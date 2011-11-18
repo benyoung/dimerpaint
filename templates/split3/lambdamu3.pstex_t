@@ -1,0 +1,13 @@
+\begin{picture}(0,0)
+\includegraphics{lambdamu3.pstex}
+\end{picture}
+\setlength{\unitlength}{1.00375pt}
+%
+\begingroup\makeatletter\ifx\PutLabel\undefined
+\gdef\PutLabel#1#2{
+\put(#1){\makebox(0,0){\ensuremath{\scriptstyle{#2}}}}
+}
+\fi\endgroup
+%
+\begin{picture}(365,344.759526419164)(8,0)
+\end{picture}

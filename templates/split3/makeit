@@ -1,0 +1,12 @@
+#!/bin/sh
+
+mklattice full3.mkl
+mklattice lambdamu3.mkl
+mklattice nu3.mkl
+
+cp full3.vertex full.vertex
+cp full3.edge full.edge
+cp full3.hexagon full.hexagon
+
+cp lambdamu3.edge A.edge
+cp nu3.edge B.edge
