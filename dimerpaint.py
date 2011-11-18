@@ -312,7 +312,7 @@ def randomize(matching, hexlist):
 #===================================================================
 # Main program
 
-if(leng(sys.arg) != 3):
+if(len(sys.argv) != 3):
     exit("usage: dimerpaint (input) (output)")
 
 basename = sys.argv[1]
@@ -327,9 +327,10 @@ coords = read_vertices(basename + "full.vertex")
 background = read_edges(basename + "full.edge")
 hexagons = read_hexagons(basename + "full.hexagon")
 
-shutil.copyfile(basename + "full.vertex", outputbasename + "full.vertex")
-shutil.copyfile(basename + "full.edge", outputbasename + "full.edge")
-shutil.copyfile(basename + "full.hexagon", outputbasename + "full.hexagon")
+if(basename != outputbasename): 
+    shutil.copyfile(basename + "full.vertex", outputbasename + "full.vertex")
+    shutil.copyfile(basename + "full.edge", outputbasename + "full.edge")
+    shutil.copyfile(basename + "full.hexagon", outputbasename + "full.hexagon")
 
 region_width = 400
 window = region_width + 40
@@ -339,8 +340,8 @@ matching_A = read_edges(basename + "A.edge")
 matching_B = read_edges(basename + "B.edge")
 matchings = [matching_A, matching_B]
 
-randomize(matching_A, hexagons)
-randomize(matching_B, hexagons)
+#randomize(matching_A, hexagons)
+#randomize(matching_B, hexagons)
 
 pygame.init()
 screen=pygame.display.set_mode([1350,600])
@@ -386,5 +387,5 @@ pygame.quit()
 
 # Do the output.
 
-write_edges(matchings[0], basename + "A.edge")
-write_edges(matchings[1], basename + "B.edge")
+write_edges(matchings[0], outputbasename + "A.edge")
+write_edges(matchings[1], outputbasename + "B.edge")
