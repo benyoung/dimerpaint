@@ -48,20 +48,23 @@ def rescale(coords, desired_width):
         coords[k] = (new_x, new_y)
 
 
-# Read in a list of edges.  Store in a dictionary.
+# Read in a list of edges.  Store in a dictionary.  Each edge is a "frozen set" 
+# which is an immutable, unordered tuple
 def read_edges(filename):
     edges = {}
     f = open(filename, 'r')
     for line in f:
         (r1,c1,r2,c2) = line.strip().split(',')
-        edges[((int(r1),int(c1)),(int(r2),int(c2)))] = 1
+        e = frozenset([(int(r1),int(c1)),(int(r2),int(c2))])
+        edges[e] = 1
     f.close()
     return edges
 
 def write_edges(edges, filename):
     f = open(filename, 'w')
     for e in edges:
-        outputlist = [str(i) for i in (e[0][0], e[0][1], e[1][0], e[1][1])]
+        ends = [point for point in e]  
+        outputlist = [str(i) for i in (ends[0][0], ends[0][1], ends[1][0], ends[1][1])]
         output =  outputlist[0] + "," + outputlist[1] + "," 
         output += outputlist[2] + "," + outputlist[3] + "\n"  
         f.write(output)
@@ -81,20 +84,22 @@ def read_hexagons(filename):
     return hexagons
 
 def render_hexagon_center(coords, h, xoffset, yoffset):
-    x = (coords[h[0]][0] + coords[h[3]][0])/2 + xoffset
-    y = (coords[h[0]][1] + coords[h[3]][1])/2 + yoffset
+    x = int((coords[h[0]][0] + coords[h[3]][0])/2 + xoffset)
+    y = int((coords[h[0]][1] + coords[h[3]][1])/2 + yoffset)
 
     return pygame.draw.circle(screen, green, (x,y), 5)
 
 # Draw an edge in a given color
-def render_edge(coords, e, xoffset, yoffset, colour, width=4):
+def render_edge(coords, edge, xoffset, yoffset, colour, width=4):
+    e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
     p0 = (p0[0] + xoffset, p0[1] + yoffset)
     p1 = coords[e[1]] 
     p1 = (p1[0] + xoffset, p1[1] + yoffset)
     return pygame.draw.line(screen, colour, p0, p1, width)
 
-def render_double_edge(coords, e, xoffset, yoffset, colours):
+def render_double_edge(coords, edge, xoffset, yoffset, colours):
+    e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
     p1 = coords[e[1]] 
     normal_x = float(p1[1] - p0[1])
@@ -123,8 +128,11 @@ def render_background(coords, graph, xoffset, yoffset, which_side):
     boundingboxes = []
     for e in graph.keys():
         bb = render_edge(coords, e, xoffset, yoffset, grey, 1)        
+        bb.inflate_ip(3,3) # make it a little bigger for ease of clicking
+        #pygame.draw.rect(screen, green, bb, 1)  debug
         boundingboxes.append(("edge", e, which_side, bb))
     return boundingboxes    
+
 
 # Draw a matching.
 def render_matching(coords, matching, xoffset, yoffset, color):
@@ -134,9 +142,8 @@ def render_matching(coords, matching, xoffset, yoffset, color):
 # Redraw doubled edges in a pair of matchings.
 def render_doubled_edges(coords, m1, m2, xoffset, yoffset):
     for e in m1.keys():
-        if(e in m2 or (e[1], e[0]) in m2):
+        if(e in m2):
             render_double_edge(coords, e, xoffset, yoffset, [black,red])
-
 
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
@@ -150,6 +157,7 @@ def render_everything(background, matchings, hexagons,window):
     render_matching(coords, matchings[0], 1*window, 0*window, black)
     render_matching(coords, matchings[1], 1*window, 0*window, red)
     render_matching(coords, matchings[1], 2*window, 0*window, red)
+
 
     render_doubled_edges(coords, matchings[0],matchings[1], 1*window, 0*window)
 
@@ -165,9 +173,9 @@ def render_everything(background, matchings, hexagons,window):
 def adjacency_map(M): 
     adj = {}
     for edge in M:
-        (p0, p1) = edge
-        adj[p0] = p1
-        adj[p1] = p0
+        endpoints = [endpt for endpt in edge]
+        adj[endpoints[0]] = endpoints[1]
+        adj[endpoints[1]] = endpoints[0]
     return adj
 
 #==============================================================
@@ -257,15 +265,14 @@ def find_path(adj1, adj2, start):
     return path
 
 # Flip a path in two matchings, starting at an edge in the first.
-def flip_path(matchings, m1, m2, edge):
+def flip_path(matchings, m1, m2, unordered_edge):
+    edge = [endpoint for endpoint in unordered_edge]
     adj1 = adjacency_map(matchings[m1])
     adj2 = adjacency_map(matchings[m2])
     path = find_path(adj1, adj2, edge[0])
 
     # don't do anything if user clicked a doubled edge.
     if(len(path) == 3 and path[0] == path[2]): return 
-
-
     
     # make lists of edges corresponding to the path
     loop1 = []
@@ -281,20 +288,19 @@ def flip_path(matchings, m1, m2, edge):
         del matchings[m2][e]
         matchings[m1][e] = 1
 
+#==============================================================================
+# Flip one hexagon.
 def flip_hex(matching, hexagons, index):
     h = hexagons[index]
-    edges = [(h[i], h[(i+1)%6]) for i in range(6)]
+    edges = [frozenset([h[i], h[(i+1)%6]]) for i in range(6)]
     for e in edges:
-        backwards_e = (e[1], e[0])
         if(e in matching): 
             del matching[e]
         else:
-            if(backwards_e in matching):
-                del matching[backwards_e]
-            else:
-                matching[e] = 1
+            matching[e] = 1
 
 #====================================================================
+# Run the glauber dynamics to randomize one picture
 def randomize(matching, hexlist):
     for trial in range(5000):
         # Choose a random index i
@@ -361,18 +367,20 @@ while done==False:
         if event.type == pygame.QUIT: # If user clicked close
             done=True # Flag that we are done so we exit this loop
         if event.type == pygame.MOUSEBUTTONUP:
-            radius = 2
+            radius = 1
             ul = (event.pos[0] - radius, event.pos[1] - radius)
             clickpoint = pygame.Rect(ul , (2*radius,2*radius))
             index = clickpoint.collidelist(bounding_boxes)
             if(index != -1):
                 (objtype, index, side, box) = bounding_box_data[index]
+                print (objtype,index,side,box)
                 if objtype == "edge":
-                    pass
-                    #if index in matchings[side]:
-                    #    del matchings[side][index]
-                    #else:
-                    #    matchings[side][index] = 1
+                    if index in matchings[side]:
+                        print "deleting"
+                        del matchings[side][index]
+                    else:
+                        print "adding"
+                        matchings[side][index] = 1
                 else:
                     flip_hex(matchings[side], hexagons, index)
 
