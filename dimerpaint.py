@@ -135,9 +135,13 @@ def render_background(coords, graph, xoffset, yoffset, which_side):
 
 
 # Draw a matching.
-def render_matching(coords, matching, xoffset, yoffset, color):
-    for e in matching.keys():
+def render_matching(coords, matchings, which_side, xoffset, yoffset, color):
+    boundingboxes = []
+    for e in matchings[which_side].keys():
         bb = render_edge(coords, e, xoffset, yoffset, color)        
+        bb.inflate_ip(3,3) # make it a little bigger for ease of clicking
+        boundingboxes.append(("matchededge", e, which_side, bb))
+    return boundingboxes
 
 # Redraw doubled edges in a pair of matchings.
 def render_doubled_edges(coords, m1, m2, xoffset, yoffset):
@@ -153,10 +157,10 @@ def render_everything(background, matchings, hexagons,window):
     boxes = render_background(coords, background, 0*window, 0*window, 0)
     boxes += render_background(coords, background, 2*window, 0*window, 1)
 
-    render_matching(coords, matchings[0], 0*window, 0*window, black)
-    render_matching(coords, matchings[0], 1*window, 0*window, black)
-    render_matching(coords, matchings[1], 1*window, 0*window, red)
-    render_matching(coords, matchings[1], 2*window, 0*window, red)
+    render_matching(coords, matchings,0, 0*window, 0*window, black)
+    boxes += render_matching(coords, matchings,0, 1*window, 0*window, black)
+    boxes += render_matching(coords, matchings,1, 1*window, 0*window, red)
+    render_matching(coords, matchings,1, 2*window, 0*window, red)
 
 
     render_doubled_edges(coords, matchings[0],matchings[1], 1*window, 0*window)
@@ -273,14 +277,17 @@ def flip_path(matchings, m1, m2, unordered_edge):
 
     # don't do anything if user clicked a doubled edge.
     if(len(path) == 3 and path[0] == path[2]): return 
+
+    print "made it"
+    print path
     
     # make lists of edges corresponding to the path
     loop1 = []
     loop2 = []
     for i in range(len(path) - 1):
-        for e in [(path[i], path[i+1]), (path[i+1], path[i])]:
-            if e in matchings[m1]: loop1.append(e)
-            if e in matchings[m2]: loop2.append(e)
+        e = frozenset([path[i], path[i+1]])
+        if e in matchings[m1]: loop1.append(e)
+        if e in matchings[m2]: loop2.append(e)
     for e in loop1:
         del matchings[m1][e]
         matchings[m2][e] = 1
@@ -350,7 +357,7 @@ matchings = [matching_A, matching_B]
 #randomize(matching_B, hexagons)
 
 pygame.init()
-screen=pygame.display.set_mode([1350,600])
+screen=pygame.display.set_mode([1350,450])
 done=False #Loop until the user clicks the close button.
 clock=pygame.time.Clock() # Used to manage how fast the screen updates
 
@@ -381,6 +388,8 @@ while done==False:
                     else:
                         print "adding"
                         matchings[side][index] = 1
+                elif objtype == "matchededge":
+                    flip_path(matchings, side, 1-side, index)
                 else:
                     flip_hex(matchings[side], hexagons, index)
 
