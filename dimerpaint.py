@@ -149,26 +149,89 @@ def render_doubled_edges(coords, m1, m2, xoffset, yoffset):
         if(e in m2):
             render_double_edge(coords, e, xoffset, yoffset, [black,red])
 
+#===================================================================
+# Create a button, with given text and center, and a callback function
+# for what to do when it's clicked.  Callbacks get a dict, "args", as
+# their arguments.  I make no attempt to police what goes into args.
+#
+# For alignment reasons "pos" is the middle of the left side of the button.
+
+def drawbutton(pos, label, font, callback, args):
+    text = font.render(label, True, black, white)    
+    bb = text.get_rect()
+    bb.midleft = pos
+    screen.blit(text, bb)
+    bb.inflate_ip(4,4)
+    pygame.draw.rect(screen, black, bb, 1)
+    return ("button", args, callback, bb)
+
+# Draw a row of buttons.  Return a list of their bounding boxes.
+# Argumnet is a list of pairs: (name, callback, args)
+
+def draw_button_row(x, y, spacing, font, buttondata):
+    boundingboxes = []
+    x_current = x
+    for button in buttondata:
+        pos = (x_current, y)
+        bb = drawbutton(pos, button[0], font, button[1], button[2])
+        x_current += bb[3].width + spacing
+        boundingboxes.append(bb)
+    return boundingboxes
+
+def test_callback(args):
+    print "Clicked test button on side" , args["side"]
+
+def randomize_callback(args):
+    print "Clicked randomize button on side", args["side"]
+    randomize(args["matching"], args["hexagons"])
+
+def quit_callback(args):
+    print "Quit button clicked."
+    pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
+
+def render_dimer_buttons(x,y,matchings, side, hexagons, font):
+    args = {"side":side, "matching":matchings[side], "hexagons":hexagons}
+
+    buttonrow = [
+        ("Randomize", randomize_callback, args),
+        ("Testing", test_callback, args)
+        ]
+
+    return draw_button_row(x, y, 5, font, buttonrow)
+
+def render_center_buttons(x,y,matchings, hexagons, font):
+    buttonrow = [
+        ("Quit", quit_callback, {}),
+        ("Testing", test_callback, {"side":2} )
+        ]
+    return draw_button_row(x, y, 5, font, buttonrow)
+
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
-def render_everything(background, matchings, hexagons,window):
+def render_everything(background, matchings, hexagons,window,font):
     screen.fill(white)
+    y = 30
+    
+    boxes = render_background(coords, background, 0*window, y, 0)
+    boxes += render_background(coords, background, 2*window, y, 1)
 
-    boxes = render_background(coords, background, 0*window, 0*window, 0)
-    boxes += render_background(coords, background, 2*window, 0*window, 1)
-
-    render_matching(coords, matchings,0, 0*window, 0*window, black)
-    boxes += render_matching(coords, matchings,0, 1*window, 0*window, black)
-    boxes += render_matching(coords, matchings,1, 1*window, 0*window, red)
-    render_matching(coords, matchings,1, 2*window, 0*window, red)
+    render_matching(coords, matchings,0, 0*window, y, black)
+    boxes += render_matching(coords, matchings,0, 1*window, y, black)
+    boxes += render_matching(coords, matchings,1, 1*window, y, red)
+    render_matching(coords, matchings,1, 2*window, y, red)
 
 
-    render_doubled_edges(coords, matchings[0],matchings[1], 1*window, 0*window)
+    render_doubled_edges(coords, matchings[0],matchings[1], 1*window, y)
 
     boxes += render_active_hex_centers(coords, hexagons, matchings[0], 
-            0*window, 0*window, 0)
+            0*window, y, 0)
     boxes += render_active_hex_centers(coords, hexagons, matchings[1], 
-            2*window, 0*window, 1)
+            2*window, y, 1)
+
+    boxes += render_dimer_buttons(10+0*window, 10, matchings, 0, hexagons, font)
+    boxes += render_dimer_buttons(10+2*window, 10, matchings, 1, hexagons, font)
+
+    boxes += render_center_buttons(10+window, 10, matchings, hexagons, font)
     pygame.display.flip()
     return boxes
 
@@ -295,7 +358,7 @@ def flip_path(matchings, m1, m2, unordered_edge):
         del matchings[m2][e]
         matchings[m1][e] = 1
 
-#==============================================================================
+#============================================================================
 # Flip one hexagon.
 def flip_hex(matching, hexagons, index):
     h = hexagons[index]
@@ -309,7 +372,7 @@ def flip_hex(matching, hexagons, index):
 #====================================================================
 # Run the glauber dynamics to randomize one picture
 def randomize(matching, hexlist):
-    for trial in range(5000):
+    for trial in range(500):
         # Choose a random index i
         adj = adjacency_map(matching)
         activelist = []
@@ -320,7 +383,6 @@ def randomize(matching, hexlist):
         i = numpy.random.randint(len(activelist))
         if is_active(hexlist[activelist[i]], adj):
             flip_hex(matching, hexlist, activelist[i]) 
-
 
 #===================================================================
 # Main program
@@ -357,11 +419,14 @@ matchings = [matching_A, matching_B]
 #randomize(matching_B, hexagons)
 
 pygame.init()
+pygame.font.init()
+font = pygame.font.Font(None, 18)
+
 screen=pygame.display.set_mode([1350,450])
 done=False #Loop until the user clicks the close button.
 clock=pygame.time.Clock() # Used to manage how fast the screen updates
 
-bounding_box_data = render_everything(background, matchings, hexagons,window)
+bounding_box_data = render_everything(background, matchings, hexagons,window,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
 
 
@@ -379,9 +444,9 @@ while done==False:
             clickpoint = pygame.Rect(ul , (2*radius,2*radius))
             index = clickpoint.collidelist(bounding_boxes)
             if(index != -1):
-                (objtype, index, side, box) = bounding_box_data[index]
-                print (objtype,index,side,box)
+                objtype = bounding_box_data[index][0]
                 if objtype == "edge":
+                    (objtype, index, side, box) = bounding_box_data[index]
                     if index in matchings[side]:
                         print "deleting"
                         del matchings[side][index]
@@ -389,17 +454,25 @@ while done==False:
                         print "adding"
                         matchings[side][index] = 1
                 elif objtype == "matchededge":
+                    (objtype, index, side, box) = bounding_box_data[index]
                     flip_path(matchings, side, 1-side, index)
-                else:
+                elif objtype == "button":
+                    (objtype, args, callback, bb) = bounding_box_data[index]
+                    callback(args)
+                elif objtype == "hexagon":
+                    (objtype, index, side, box) = bounding_box_data[index]
                     flip_hex(matchings[side], hexagons, index)
+                else:
+                    print "uh why am I here?"
 
                 bounding_box_data = render_everything(background,matchings, 
-                            hexagons, window)
+                            hexagons, window, font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
 
     # Limit to 20 frames per second
     clock.tick(20)
  
+pygame.font.quit()
 pygame.quit()
 
 # Do the output.
