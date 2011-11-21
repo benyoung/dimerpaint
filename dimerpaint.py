@@ -33,7 +33,7 @@ def read_vertices(filename):
 
 # Rescale the x and y coordinates isometrically so that the width of the 
 # entire array is the specified size.
-def rescale(coords, desired_width):
+def rescale(coords, dualcoords, desired_width):
     xvalues = [v[0] for v in coords.values()]
     yvalues = [v[1] for v in coords.values()]
     xmin = min(xvalues)
@@ -46,6 +46,11 @@ def rescale(coords, desired_width):
         new_x = round((v[0] - xmin) * scale_factor)
         new_y = round((ymax - v[1]) * scale_factor)
         coords[k] = (new_x, new_y)
+    for k in dualcoords.keys():
+        v = dualcoords[k]
+        new_x = round((v[0] - xmin) * scale_factor)
+        new_y = round((ymax - v[1]) * scale_factor)
+        dualcoords[k] = (new_x, new_y)
 
 
 # Read in a list of edges.  Store in a dictionary.  Each edge is a "frozen set" 
@@ -83,11 +88,23 @@ def read_hexagons(filename):
     f.close()
     return hexagons
 
+# read in a list of rhombi.  Store in a list.
+def read_rhombi(filename):
+    rhombi = {}
+    f = open(filename, 'r')
+    for line in f:
+        n = [int(s) for s in line.strip().split(',')]
+        edge = frozenset([(n[0], n[1]), (n[2],n[3])])
+        rhombus = [(n[4],n[5]),(n[6],n[7]),(n[8],n[9]),(n[10],n[11])]
+        rhombi[edge] = rhombus
+    f.close()
+    return rhombi
+
 def render_hexagon_center(coords, h, xoffset, yoffset):
     x = int((coords[h[0]][0] + coords[h[3]][0])/2 + xoffset)
     y = int((coords[h[0]][1] + coords[h[3]][1])/2 + yoffset)
 
-    return pygame.draw.circle(screen, green, (x,y), 5)
+    return pygame.draw.circle(screen, green, (x,y), 4)
 
 # Draw an edge in a given color
 def render_edge(coords, edge, xoffset, yoffset, colour, width=4):
@@ -97,6 +114,13 @@ def render_edge(coords, edge, xoffset, yoffset, colour, width=4):
     p1 = coords[e[1]] 
     p1 = (p1[0] + xoffset, p1[1] + yoffset)
     return pygame.draw.line(screen, colour, p0, p1, width)
+
+def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width=2):
+    for i in range(4):
+        j = (i+1) % 4
+        rhomb_edge = frozenset([rhomb[i], rhomb[j]])
+        render_edge(dualcoords, rhomb_edge, xoffset, yoffset, colour, width)
+
 
 def render_double_edge(coords, edge, xoffset, yoffset, colours):
     e = [endpt for endpt in edge]
@@ -128,7 +152,7 @@ def render_background(coords, graph, xoffset, yoffset, which_side):
     boundingboxes = []
     for e in graph.keys():
         bb = render_edge(coords, e, xoffset, yoffset, grey, 1)        
-        bb.inflate_ip(3,3) # make it a little bigger for ease of clicking
+        bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
         #pygame.draw.rect(screen, green, bb, 1)  debug
         boundingboxes.append(("edge", e, which_side, bb))
     return boundingboxes    
@@ -139,9 +163,36 @@ def render_matching(coords, matchings, which_side, xoffset, yoffset, color):
     boundingboxes = []
     for e in matchings[which_side].keys():
         bb = render_edge(coords, e, xoffset, yoffset, color)        
-        bb.inflate_ip(3,3) # make it a little bigger for ease of clicking
+        bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
         boundingboxes.append(("matchededge", e, which_side, bb))
     return boundingboxes
+
+# Draw the tiling corresponding to a matching.
+def render_tiling(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color):
+    for edge in matchings[which_side].keys():
+        try:
+            rhomb = rhombi[edge]
+            render_rhombus(dualcoords, rhomb, xoffset, yoffset, color)        
+        except KeyError:
+            pass
+
+# Draw the boundary of the matched region.  There's a cheap way to do this:
+# the boundary is all the edges in the dual graph that are singly covered by
+# a tile edge.
+def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, colour):
+    rhomb_edges = defaultdict(int)
+    for edge in matchings[which_side].keys():
+        try:
+            rhomb = rhombi[edge]
+            for i in range(4):
+                j = (i+1) % 4
+                rhomb_edge = frozenset([rhomb[i], rhomb[j]])
+                rhomb_edges[rhomb_edge] += 1 
+        except KeyError:
+            pass
+    for edge in rhomb_edges.keys():
+        if rhomb_edges[edge] == 1:
+            render_edge(dualcoords, edge, xoffset, yoffset, colour, 2)
 
 # Redraw doubled edges in a pair of matchings.
 def render_doubled_edges(coords, m1, m2, xoffset, yoffset):
@@ -189,12 +240,30 @@ def quit_callback(args):
     print "Quit button clicked."
     pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
 
-def render_dimer_buttons(x,y,matchings, side, hexagons, font):
+# Toggle visibility of a layer
+def showhide_callback(args):
+    layer = args["layer"]
+    show = args["show"]
+    print "Toggle ", layer
+    show[layer] = not show[layer]
+    
+def render_dimer_buttons(x,y, side, renderables, font):
+    matchings = renderables["matchings"] 
+    hexagons = renderables["hexagons"]
+    show = renderables["show"]
     args = {"side":side, "matching":matchings[side], "hexagons":hexagons}
+    if(side==0):
+        prefix = "A_"
+    else:
+        prefix = "B_"
 
     buttonrow = [
         ("Randomize", randomize_callback, args),
-        ("Testing", test_callback, args)
+        ("Background", showhide_callback, {"layer":prefix+"background", "show":show}),
+        ("Matching", showhide_callback, {"layer":prefix+"matching", "show":show}),
+        ("Tiling", showhide_callback, {"layer":prefix+"tiling", "show":show}),
+        ("Boundary", showhide_callback, {"layer":prefix+"boundary", "show":show}),
+        ("Centers", showhide_callback, {"layer":prefix+"centers", "show":show})
         ]
 
     return draw_button_row(x, y, 5, font, buttonrow)
@@ -208,29 +277,59 @@ def render_center_buttons(x,y,matchings, hexagons, font):
 
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
-def render_everything(background, matchings, hexagons,window,font):
+def render_everything(renderables,window,font):
+    background = renderables["background"] 
+    matchings = renderables["matchings"] 
+    hexagons = renderables["hexagons"]
+    rhombi = renderables["rhombi"]
+    coords = renderables["coords"]
+    dualcoords = renderables["dualcoords"]
+    show = renderables["show"]
+     
     screen.fill(white)
     y = 30
     
-    boxes = render_background(coords, background, 0*window, y, 0)
-    boxes += render_background(coords, background, 2*window, y, 1)
-
-    render_matching(coords, matchings,0, 0*window, y, black)
-    boxes += render_matching(coords, matchings,0, 1*window, y, black)
-    boxes += render_matching(coords, matchings,1, 1*window, y, red)
-    render_matching(coords, matchings,1, 2*window, y, red)
-
-
-    render_doubled_edges(coords, matchings[0],matchings[1], 1*window, y)
-
-    boxes += render_active_hex_centers(coords, hexagons, matchings[0], 
+    boxes = []
+    if show["A_background"]:
+        boxes += render_background(coords, background, 0*window, y, 0)
+    if show["A_matching"]:
+        render_matching(coords, matchings,0, 0*window, y, black)
+    if show["A_tiling"]:
+        render_tiling(dualcoords, rhombi, matchings,0, 0*window, y, black)
+    if show["A_boundary"]:
+        render_boundary(dualcoords, rhombi, matchings, 0, 0*window, y, black)
+    if show["A_centers"]:
+        boxes += render_active_hex_centers(coords, hexagons, matchings[0], 
             0*window, y, 0)
-    boxes += render_active_hex_centers(coords, hexagons, matchings[1], 
+
+    if show["B_background"]:
+        boxes += render_background(coords, background, 2*window, y, 1)
+    if show["B_matching"]:
+        render_matching(coords, matchings,1, 2*window, y, red)
+    if show["B_tiling"]:
+        render_tiling(dualcoords, rhombi, matchings, 1, 2*window, y, red)
+    if show["B_boundary"]:
+        render_boundary(dualcoords, rhombi, matchings, 1, 2*window, y, red)
+    if show["B_centers"]:
+        boxes += render_active_hex_centers(coords, hexagons, matchings[1], 
             2*window, y, 1)
 
-    boxes += render_dimer_buttons(10+0*window, 10, matchings, 0, hexagons, font)
-    boxes += render_dimer_buttons(10+2*window, 10, matchings, 1, hexagons, font)
+    if show["center_background"]:
+        boxes += render_background(coords, background, 1*window, y, 1)
+    if show["center_A_boundary"]:
+        render_boundary(dualcoords, rhombi, matchings, 0, 1*window, y, black)
+    if show["center_B_boundary"]:
+        render_boundary(dualcoords, rhombi, matchings, 1, 1*window, y, red)
+    if show["center_A_matching"]:
+        boxes += render_matching(coords, matchings,0, 1*window, y, black)
+    if show["center_B_matching"]:
+        boxes += render_matching(coords, matchings,1, 1*window, y, red)
+    if show["center_A_matching"] and show["center_B_matching"]:
+        render_doubled_edges(coords, matchings[0],matchings[1], 1*window, y)
 
+
+    boxes += render_dimer_buttons(10+0*window, 10, 0, renderables, font)
+    boxes += render_dimer_buttons(10+2*window, 10, 1, renderables, font)
     boxes += render_center_buttons(10+window, 10, matchings, hexagons, font)
     pygame.display.flip()
     return boxes
@@ -341,9 +440,6 @@ def flip_path(matchings, m1, m2, unordered_edge):
     # don't do anything if user clicked a doubled edge.
     if(len(path) == 3 and path[0] == path[2]): return 
 
-    print "made it"
-    print path
-    
     # make lists of edges corresponding to the path
     loop1 = []
     loop2 = []
@@ -383,6 +479,19 @@ def randomize(matching, hexlist):
         i = numpy.random.randint(len(activelist))
         if is_active(hexlist[activelist[i]], adj):
             flip_hex(matching, hexlist, activelist[i]) 
+#=================================================
+# Compute coordinates of dual vertices.
+def dualcoords(hexlist):
+    dualvertexlist = []
+    for h in hexlist:
+        x = 0;
+        y = 0;
+        for p in h:
+            x += p[0];
+            y += p[1];
+        center = (x/6, y/6);    
+        dualvertexlist.append(center);
+    return dualvertexlist;
 
 #===================================================================
 # Main program
@@ -401,6 +510,10 @@ outputbasename += "/"
 coords = read_vertices(basename + "full.vertex")
 background = read_edges(basename + "full.edge")
 hexagons = read_hexagons(basename + "full.hexagon")
+dualcoords = read_vertices(basename + "full.dualvertex");
+rhombi = read_rhombi(basename + "full.rhombus");
+
+
 
 if(basename != outputbasename): 
     shutil.copyfile(basename + "full.vertex", outputbasename + "full.vertex")
@@ -409,7 +522,7 @@ if(basename != outputbasename):
 
 region_width = 400
 window = region_width + 40
-rescale(coords, region_width)
+rescale(coords, dualcoords, region_width)
 
 matching_A = read_edges(basename + "A.edge")
 matching_B = read_edges(basename + "B.edge")
@@ -426,10 +539,36 @@ screen=pygame.display.set_mode([1350,450])
 done=False #Loop until the user clicks the close button.
 clock=pygame.time.Clock() # Used to manage how fast the screen updates
 
-bounding_box_data = render_everything(background, matchings, hexagons,window,font)
+show = {
+    "A_background": True,
+    "A_matching": True,
+    "A_tiling": False,
+    "A_boundary": False,
+    "A_centers": True,
+
+    "B_background": True,
+    "B_matching": True,
+    "B_tiling": False,
+    "B_boundary": False,
+    "B_centers": True,
+
+    "center_background": False,
+    "center_A_matching": True,
+    "center_B_matching": True,
+    "center_A_boundary": True,
+    "center_B_boundary": True,
+}
+
+renderables = {"background":background, 
+               "matchings":matchings, 
+               "hexagons":hexagons, 
+               "rhombi": rhombi,
+               "coords": coords,
+               "dualcoords":dualcoords,
+               "show":show}
+
+bounding_box_data = render_everything(renderables,window,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
-
-
 
 
 #=================================================
@@ -465,8 +604,7 @@ while done==False:
                 else:
                     print "uh why am I here?"
 
-                bounding_box_data = render_everything(background,matchings, 
-                            hexagons, window, font)
+                bounding_box_data = render_everything(renderables, window, font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
 
     # Limit to 20 frames per second
