@@ -1,0 +1,8 @@
+This is a program for drawing pictures of the dimer model on the hexagon
+lattice.  Perhaps it is of some use to you?  Who knows.  
+
+Use mklattice to make an input file, or start with some of the input files I have included.  mklattice can also be found on my github site.
+
+It uses a graphical user interface, implemented in pygame.
+
+
