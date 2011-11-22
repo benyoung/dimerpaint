@@ -116,11 +116,12 @@ def render_edge(coords, edge, xoffset, yoffset, colour, width=4):
     return pygame.draw.line(screen, colour, p0, p1, width)
 
 def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width=2):
-    for i in range(4):
-        j = (i+1) % 4
-        rhomb_edge = frozenset([rhomb[i], rhomb[j]])
-        render_edge(dualcoords, rhomb_edge, xoffset, yoffset, colour, width)
-
+    coordslist = []
+    for p in rhomb:
+        p0 = dualcoords[p] 
+        p0 = (p0[0] + xoffset, p0[1] + yoffset)
+        coordslist.append(p0)
+    pygame.draw.polygon(screen, colour, coordslist, width)
 
 def render_double_edge(coords, edge, xoffset, yoffset, colours):
     e = [endpt for endpt in edge]
@@ -167,11 +168,33 @@ def render_matching(coords, matchings, which_side, xoffset, yoffset, color):
         boundingboxes.append(("matchededge", e, which_side, bb))
     return boundingboxes
 
+# Draw the box pile corresponding to a matching.  This is basically like
+# drawing the tiling and then shading the tiles.
+def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color):
+    for edge in matchings[which_side].keys():
+        try:
+            rhomb = rhombi[edge]
+            ends = [p for p in edge]
+            a = ends[0]
+            b = ends[1]
+            inverseslope = (a[0]-b[0]) / (a[1]-b[1])
+            intensity = {-1: 0.65, 0:0.9, 1:0.75}[inverseslope]
+            fillcolor_components = [0,0,0]
+            for i in range(3):
+                fillcolor_components[i] = 255 * (intensity)  + color[i] * (1-intensity)
+
+            fillcolor = tuple(fillcolor_components)
+            print fillcolor
+            render_rhombus(dualcoords, rhomb, xoffset, yoffset, fillcolor, 0)        
+        except KeyError:
+            pass
+
 # Draw the tiling corresponding to a matching.
 def render_tiling(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color):
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
+
             render_rhombus(dualcoords, rhomb, xoffset, yoffset, color)        
         except KeyError:
             pass
@@ -232,6 +255,14 @@ def draw_button_row(x, y, spacing, font, buttondata):
 def test_callback(args):
     print "Clicked test button on side" , args["side"]
 
+def maximize_callback(args):
+    print "Clicked minimize button on side", args["side"]
+    maximize(args["matching"], args["hexagons"])
+
+def minimize_callback(args):
+    print "Clicked minimize button on side", args["side"]
+    minimize(args["matching"], args["hexagons"])
+
 def randomize_callback(args):
     print "Clicked randomize button on side", args["side"]
     randomize(args["matching"], args["hexagons"])
@@ -248,6 +279,7 @@ def showhide_callback(args):
     show[layer] = not show[layer]
     
 def render_dimer_buttons(x,y, side, renderables, font):
+    buttons = []
     matchings = renderables["matchings"] 
     hexagons = renderables["hexagons"]
     show = renderables["show"]
@@ -257,16 +289,22 @@ def render_dimer_buttons(x,y, side, renderables, font):
     else:
         prefix = "B_"
 
-    buttonrow = [
-        ("Randomize", randomize_callback, args),
+    buttonrow1 = [
         ("Background", showhide_callback, {"layer":prefix+"background", "show":show}),
         ("Matching", showhide_callback, {"layer":prefix+"matching", "show":show}),
         ("Tiling", showhide_callback, {"layer":prefix+"tiling", "show":show}),
+        ("Boxes", showhide_callback, {"layer":prefix+"boxes", "show":show}),
         ("Boundary", showhide_callback, {"layer":prefix+"boundary", "show":show}),
         ("Centers", showhide_callback, {"layer":prefix+"centers", "show":show})
         ]
 
-    return draw_button_row(x, y, 5, font, buttonrow)
+    buttons =  draw_button_row(x, y, 5, font, buttonrow1)
+    buttonrow2 = [
+        ("Randomize", randomize_callback, args),
+        ("Minimize", minimize_callback, args),
+        ("Maximize", maximize_callback, args),
+        ]
+    return buttons + draw_button_row(x, y+20, 5, font, buttonrow2)
 
 def render_center_buttons(x,y,matchings, hexagons, font):
     buttonrow = [
@@ -287,15 +325,17 @@ def render_everything(renderables,window,font):
     show = renderables["show"]
      
     screen.fill(white)
-    y = 30
+    y = 45
     
     boxes = []
     if show["A_background"]:
         boxes += render_background(coords, background, 0*window, y, 0)
-    if show["A_matching"]:
-        render_matching(coords, matchings,0, 0*window, y, black)
+    if show["A_boxes"]:
+        render_boxes(dualcoords, rhombi, matchings,0,0*window, y, black)
     if show["A_tiling"]:
         render_tiling(dualcoords, rhombi, matchings,0, 0*window, y, black)
+    if show["A_matching"]:
+        render_matching(coords, matchings,0, 0*window, y, black)
     if show["A_boundary"]:
         render_boundary(dualcoords, rhombi, matchings, 0, 0*window, y, black)
     if show["A_centers"]:
@@ -304,10 +344,12 @@ def render_everything(renderables,window,font):
 
     if show["B_background"]:
         boxes += render_background(coords, background, 2*window, y, 1)
-    if show["B_matching"]:
-        render_matching(coords, matchings,1, 2*window, y, red)
+    if show["B_boxes"]:
+        render_boxes(dualcoords, rhombi, matchings,1,2*window, y, red)
     if show["B_tiling"]:
         render_tiling(dualcoords, rhombi, matchings, 1, 2*window, y, red)
+    if show["B_matching"]:
+        render_matching(coords, matchings,1, 2*window, y, red)
     if show["B_boundary"]:
         render_boundary(dualcoords, rhombi, matchings, 1, 2*window, y, red)
     if show["B_centers"]:
@@ -479,6 +521,45 @@ def randomize(matching, hexlist):
         i = numpy.random.randint(len(activelist))
         if is_active(hexlist[activelist[i]], adj):
             flip_hex(matching, hexlist, activelist[i]) 
+
+#====================================================================
+# Find the maximum matching, with respect to height function.
+def maximize(matching, hexlist):
+    activelist = []
+    finished = False
+    while not finished:
+        finished = True
+        for i in range(len(hexlist)):
+            h = hexlist[i]
+            e = [frozenset([h[i], h[(i+1)%6]]) for i in range(6)]
+            if e[0] in matching and e[2] in matching and e[4] in matching:
+                del matching[e[0]]
+                del matching[e[2]]
+                del matching[e[4]]
+                matching[e[1]] = 1
+                matching[e[3]] = 1
+                matching[e[5]] = 1
+                finished = False
+
+#====================================================================
+# Find the minimum matching, with respect to height function.
+def minimize(matching, hexlist):
+    activelist = []
+    finished = False
+    while not finished:
+        finished = True
+        for i in range(len(hexlist)):
+            h = hexlist[i]
+            e = [frozenset([h[i], h[(i+1)%6]]) for i in range(6)]
+            if e[1] in matching and e[3] in matching and e[5] in matching:
+                del matching[e[1]]
+                del matching[e[3]]
+                del matching[e[5]]
+                matching[e[0]] = 1
+                matching[e[2]] = 1
+                matching[e[4]] = 1
+                finished = False
+
 #=================================================
 # Compute coordinates of dual vertices.
 def dualcoords(hexlist):
@@ -497,28 +578,22 @@ def dualcoords(hexlist):
 # Main program
 
 if(len(sys.argv) != 3):
-    exit("usage: dimerpaint (input) (output)")
+    exit("usage: dimerpaint (data directory) (input file)")
 
-basename = sys.argv[1]
-basename += "/"
-outputbasename = sys.argv[2]
+data_directory_name = sys.argv[1]
+input_filename = sys.argv[2]
+
+basename = data_directory_name + "/" + input_filename + "/"
+
 # Setup output directory
-if not os.path.isdir(outputbasename):
-    os.mkdir(outputbasename)
-outputbasename += "/"
+if not os.path.isdir(basename):
+    exit("Can't find "+basename)
 
 coords = read_vertices(basename + "full.vertex")
 background = read_edges(basename + "full.edge")
 hexagons = read_hexagons(basename + "full.hexagon")
 dualcoords = read_vertices(basename + "full.dualvertex");
 rhombi = read_rhombi(basename + "full.rhombus");
-
-
-
-if(basename != outputbasename): 
-    shutil.copyfile(basename + "full.vertex", outputbasename + "full.vertex")
-    shutil.copyfile(basename + "full.edge", outputbasename + "full.edge")
-    shutil.copyfile(basename + "full.hexagon", outputbasename + "full.hexagon")
 
 region_width = 400
 window = region_width + 40
@@ -545,12 +620,14 @@ show = {
     "A_tiling": False,
     "A_boundary": False,
     "A_centers": True,
+    "A_boxes": False,
 
     "B_background": True,
     "B_matching": True,
     "B_tiling": False,
     "B_boundary": False,
     "B_centers": True,
+    "B_boxes": False,
 
     "center_background": False,
     "center_A_matching": True,
@@ -615,5 +692,5 @@ pygame.quit()
 
 # Do the output.
 
-write_edges(matchings[0], outputbasename + "A.edge")
-write_edges(matchings[1], outputbasename + "B.edge")
+write_edges(matchings[0], basename + "A.edge")
+write_edges(matchings[1], basename + "B.edge")
