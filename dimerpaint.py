@@ -185,7 +185,6 @@ def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, co
                 fillcolor_components[i] = 255 * (intensity)  + color[i] * (1-intensity)
 
             fillcolor = tuple(fillcolor_components)
-            print fillcolor
             render_rhombus(dualcoords, rhomb, xoffset, yoffset, fillcolor, 0)        
         except KeyError:
             pass
@@ -274,6 +273,26 @@ def quit_callback(args):
     print "Quit button clicked."
     pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
 
+def load_callback(args):
+    myname = args["myname"]
+    f = args["filenames"]
+    print "Load button clicked:" + args["myname"]
+    old_basename = f["basename"]
+    save(old_basename, args["renderables"])
+
+    new_basename = f["data_directory"] + "/" + myname + "/"
+    f["input_file"] = myname
+    f["basename"] = new_basename
+
+    renderables = args["renderables"]
+    new_renderables = load(filenames["basename"], args["window"])
+    for item in new_renderables.keys():
+        renderables[item] = new_renderables[item]
+    print "Looks like I loaded it successfully"
+
+def eps_callback(args):
+    print "Print to EPS button clicked"
+
 # Toggle visibility of a layer
 def showhide_callback(args):
     layer = args["layer"]
@@ -316,19 +335,34 @@ def render_center_buttons(x,y,renderables, font):
         ("Dimer A", showhide_callback, {"layer":"center_A_matching", "show":show} ),
         ("Border A", showhide_callback, {"layer":"center_A_boundary", "show":show} ),
         ("Background", showhide_callback, {"layer":"center_background", "show":show} ),
-        ("Double edges", showhide_callback, {"layer":"center_doubled_edges", "show":show} )
         ]
     buttonrow2 = [
         ("Dimer B", showhide_callback, {"layer":"center_B_matching", "show":show} ),
         ("Border B", showhide_callback, {"layer":"center_B_boundary", "show":show} ),
-        ("Quit", quit_callback, {}),
+        ("Double edges", showhide_callback, {"layer":"center_doubled_edges", "show":show} )
         ]
     buttons =  draw_button_row(x, y, 5, font, buttonrow)
     return buttons+draw_button_row(x, y+20, 5, font, buttonrow2)
 
+def render_os_buttons(x, y, filenames, renderables, window, font):
+    buttons = []
+    datadir = filenames["data_directory"]
+    files = os.listdir(datadir)
+    buttonrow = [
+        ("Quit", quit_callback, {}),
+        ("Print EPS", eps_callback, {}),
+    ]
+    buttonrow.extend([( f, 
+                        load_callback, 
+                        {   "myname":f, 
+                            "filenames":filenames, 
+                            "renderables":renderables,
+                            "window":window}) for f in files])
+    return draw_button_row(x,y,5,font,buttonrow)
+    
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
-def render_everything(renderables,font):
+def render_everything(renderables,filenames,font):
     background = renderables["background"] 
     matchings = renderables["matchings"] 
     hexagons = renderables["hexagons"]
@@ -342,7 +376,7 @@ def render_everything(renderables,font):
     xA =positions["xA"]
     xB = positions["xB"]
     xDouble = positions["xDouble"]
-
+    window = positions["window"]
 
     screen.fill(white)
     
@@ -392,9 +426,11 @@ def render_everything(renderables,font):
             render_doubled_edges(coords, matchings, xDouble, y, [white, white])
 
 
+    
     boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font)
     boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font)
     boxes += render_center_buttons(10+xDouble, 10, renderables, font)
+    boxes += render_os_buttons(10,580,filenames,renderables,window,font)
     pygame.display.flip()
     return boxes
 
@@ -596,37 +632,95 @@ def dualcoords(hexlist):
         dualvertexlist.append(center);
     return dualvertexlist;
 
+
+#====================================================================
+# Save everything we could have changed in the current file. 
+def save(basename, renderables):
+    matchings = renderables["matchings"]
+    show = renderables["show"]
+    write_edges(matchings[0], basename + "A.edge")
+    write_edges(matchings[1], basename + "B.edge")
+    showfile = open(basename + "show.pkl", "wb")
+    pickle.dump(show, showfile)
+    showfile.close()
+
+#===================================================================
+# Load a dimerpaint configuration.
+def load(basename, window):
+    if not os.path.isdir(basename):
+        exit("Can't find "+basename)
+
+    coords = read_vertices(basename + "full.vertex")
+    background = read_edges(basename + "full.edge")
+    hexagons = read_hexagons(basename + "full.hexagon")
+    dualcoords = read_vertices(basename + "full.dualvertex");
+    rhombi = read_rhombi(basename + "full.rhombus");
+
+    matching_A = read_edges(basename + "A.edge")
+    matching_B = read_edges(basename + "B.edge")
+    matchings = [matching_A, matching_B]
+
+    if os.path.isfile(basename + "show.pkl"):
+        showfile = open(basename + "show.pkl", "rb")
+        show = pickle.load(showfile)
+        showfile.close()
+    else:
+        show = {
+            "A_background": True,
+            "A_matching": True,
+            "A_tiling": False,
+            "A_boundary": False,
+            "A_centers": True,
+            "A_boxes": False,
+
+            "B_background": True,
+            "B_matching": True,
+            "B_tiling": False,
+            "B_boundary": False,
+            "B_centers": True,
+            "B_boxes": False,
+
+            "center_background": False,
+            "center_A_matching": True,
+            "center_B_matching": True,
+            "center_A_boundary": True,
+            "center_B_boundary": True,
+            "center_doubled_edges": False,
+        }
+    positions = {
+        "y": 45,
+        "xA":  0,
+        "xB": 2*window,
+        "xDouble": window,
+        "window":window
+        }
+
+    rescale(coords, dualcoords, window)
+    return  {"background":background, 
+                   "matchings":matchings, 
+                   "hexagons":hexagons, 
+                   "rhombi": rhombi,
+                   "coords": coords,
+                   "dualcoords":dualcoords,
+                   "show":show,
+                   "positions":positions}
+
+
 #===================================================================
 # Main program
 
 if(len(sys.argv) != 3):
     exit("usage: dimerpaint (data directory) (input file)")
 
-data_directory_name = sys.argv[1]
-input_filename = sys.argv[2]
+data_directory = sys.argv[1]
+input_file = sys.argv[2]
 
-basename = data_directory_name + "/" + input_filename + "/"
+filenames = {   "data_directory":sys.argv[1],
+                "input_file":sys.argv[2],
+                "basename":sys.argv[1] + "/" + sys.argv[2] + "/" } 
 
-# Setup output directory
-if not os.path.isdir(basename):
-    exit("Can't find "+basename)
-
-coords = read_vertices(basename + "full.vertex")
-background = read_edges(basename + "full.edge")
-hexagons = read_hexagons(basename + "full.hexagon")
-dualcoords = read_vertices(basename + "full.dualvertex");
-rhombi = read_rhombi(basename + "full.rhombus");
-
-region_width = 400
-window = region_width + 40
-rescale(coords, dualcoords, region_width)
-
-matching_A = read_edges(basename + "A.edge")
-matching_B = read_edges(basename + "B.edge")
-matchings = [matching_A, matching_B]
-
-#randomize(matching_A, hexagons)
-#randomize(matching_B, hexagons)
+window = 430 # width of one of the 3 pictures.
+renderables = load(filenames["basename"], window)
 
 pygame.init()
 pygame.font.init()
@@ -636,51 +730,9 @@ screen=pygame.display.set_mode([1350,600])
 done=False #Loop until the user clicks the close button.
 clock=pygame.time.Clock() # Used to manage how fast the screen updates
 
-if os.path.isfile(basename + "show.pkl"):
-    showfile = open(basename + "show.pkl", "rb")
-    show = pickle.load(showfile)
-    showfile.close()
-else:
-    show = {
-        "A_background": True,
-        "A_matching": True,
-        "A_tiling": False,
-        "A_boundary": False,
-        "A_centers": True,
-        "A_boxes": False,
 
-        "B_background": True,
-        "B_matching": True,
-        "B_tiling": False,
-        "B_boundary": False,
-        "B_centers": True,
-        "B_boxes": False,
 
-        "center_background": False,
-        "center_A_matching": True,
-        "center_B_matching": True,
-        "center_A_boundary": True,
-        "center_B_boundary": True,
-        "center_doubled_edges": False,
-    }
-
-positions = {
-    "y": 45,
-    "xA":  0,
-    "xB": 2*window,
-    "xDouble": window,
-    }
-
-renderables = {"background":background, 
-               "matchings":matchings, 
-               "hexagons":hexagons, 
-               "rhombi": rhombi,
-               "coords": coords,
-               "dualcoords":dualcoords,
-               "show":show,
-               "positions":positions}
-
-bounding_box_data = render_everything(renderables,font)
+bounding_box_data = render_everything(renderables,filenames,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
 
 
@@ -697,6 +749,8 @@ while done==False:
             index = clickpoint.collidelist(bounding_boxes)
             if(index != -1):
                 objtype = bounding_box_data[index][0]
+                matchings = renderables["matchings"]
+                hexagons = renderables["hexagons"]
                 if objtype == "edge":
                     (objtype, index, side, box) = bounding_box_data[index]
                     if index in matchings[side]:
@@ -717,7 +771,7 @@ while done==False:
                 else:
                     print "uh why am I here?"
 
-                bounding_box_data = render_everything(renderables, font)
+                bounding_box_data = render_everything(renderables, filenames,font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
 
     # Limit to 20 frames per second
@@ -726,10 +780,6 @@ while done==False:
 pygame.font.quit()
 pygame.quit()
 
-# Do the output.
-write_edges(matchings[0], basename + "A.edge")
-write_edges(matchings[1], basename + "B.edge")
-showfile = open(basename + "show.pkl", "wb")
-pickle.dump(show, showfile)
-showfile.close()
+save(filenames["basename"], renderables)
+
 
