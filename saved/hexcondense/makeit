@@ -1,0 +1,14 @@
+#!/bin/sh
+
+mklattice full4.mkl
+mklattice lambdamu4.mkl
+mklattice nu4.mkl
+
+cp full4.vertex full.vertex
+cp full4.edge full.edge
+cp full4.hexagon full.hexagon
+cp full4.dualvertex full.dualvertex
+cp full4.rhombus full.rhombus
+
+cp lambdamu4.edge A.edge
+cp nu4.edge B.edge

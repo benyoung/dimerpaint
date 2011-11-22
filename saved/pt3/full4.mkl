@@ -1,0 +1,173 @@
+                    X---X                                                       X---X                                             
+                   /     \                                                     /     \                                            
+              X---X   H   X---X                                           X---X   H   X---X                             
+             /     \     /     \                                         /     \     /     \                            
+        X---X   H   X---X   H   X---X                               X---X   H   X---X   H   X---X                 
+       /     \     /     \     /     \                             /     \     /     \     /     \                
+  X---X   H   X---X   H   X---X   H   X---X                   X---X   H   X---X   H   X---X   H   X---X           
+ /     \     /     \     /     \     /     \                 /     \     /     \     /     \     /     \          
+X   H   X---X   H   X---X   H   X---X   H   X---X       X---X   H   X---X   H   X---X   H   X---X   H   X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                     
+ /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \                   
+X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                     
+ /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \                   
+X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                     
+ /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \                   
+X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                     
+       \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                         
+        X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                         
+             \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+              X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                       
+                   \     /     \     /     \     /     \     /     \     /     \     /                            
+                    X---X   H   X---X   H   X---X   H   X---X   H   X---X   H   X---X                             
+                         \     /     \     /     \     /     \     /     \     /                                  
+                          X---X   H   X---X   H   X---X   H   X---X   H   X---X                                             
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X   H   X---X   H   X---X   H   X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X   H   X---X   H   X---X   H   X---X   H   X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X   H   X---X   H   X---X   H   X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X   H   X---X   H   X---X   H   X---X   H   X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X   H   X---X   H   X---X   H   X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X   H   X---X   H   X---X   H   X---X   H   X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X   H   X---X   H   X---X   H   X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X   H   X---X   H   X---X   H   X---X   H   X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X   H   X---X   H   X---X   H   X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X   H   X---X   H   X---X   H   X---X   H   X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X   H   X---X   H   X---X   H   X---X                                                      
+                                     \     /     \     /     \     /                                                               
+                                      X---X   H   X---X   H   X---X                                                              
+                                           \     /     \     /                                                    
+                                            X---X   H   X---X                                                     
+                                                 \     /                                                          
+                                                  X---X                                                           
+
+MASK
+                    X---X                                                       X---X                                             
+                   /     \                                                     /     \                                            
+              X---X       X---X                                           X---X       X---X                             
+             /     \     /     \                                         /     \     /     \                            
+        X---X       X---X       X---X                               X---X       X---X       X---X                 
+       /     \     /     \     /     \                             /     \     /     \     /     \                
+  X---X       X---X       X---X       X---X                   X---X       X---X       X---X       X---X           
+ /     \     /     \     /     \     /     \                 /     \     /     \     /     \     /     \          
+X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X                     
+ /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \                   
+X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X                     
+ /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \                   
+X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X                     
+ /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \                   
+X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X                 
+ \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+  X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X                     
+       \     /     \     /     \     /     \     /     \     /     \     /     \     /     \     /                         
+        X---X       X---X       X---X       X---X       X---X       X---X       X---X       X---X                         
+             \     /     \     /     \     /     \     /     \     /     \     /     \     /                      
+              X---X       X---X       X---X       X---X       X---X       X---X       X---X                       
+                   \     /     \     /     \     /     \     /     \     /     \     /                            
+                    X---X       X---X       X---X       X---X       X---X       X---X                             
+                         \     /     \     /     \     /     \     /     \     /                                  
+                          X---X       X---X       X---X       X---X       X---X                                             
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X       X---X       X---X       X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X       X---X       X---X       X---X       X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X       X---X       X---X       X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X       X---X       X---X       X---X       X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X       X---X       X---X       X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X       X---X       X---X       X---X       X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X       X---X       X---X       X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X       X---X       X---X       X---X       X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X       X---X       X---X       X---X                                                      
+                               /     \     /     \     /     \     /     \                                                         
+                              X       X---X       X---X       X---X       X                                                      
+                               \     /     \     /     \     /     \     /                                                      
+                                X---X       X---X       X---X       X---X                                                      
+                                     \     /     \     /     \     /                                                               
+                                      X---X       X---X       X---X                                                              
+                                           \     /     \     /                                                    
+                                            X---X       X---X                                                     
+                                                 \     /                                                          
+                                                  X---X                                                           
+
+
+PARAMETERS
+vertex_types => '[xX]',
+edge_len => {
+  xx=>15,xX=>15, 
+  Xx=>15,XX=>15, 
+},
+rhombus_linecolour => {
+  '-'  =>  "0 0 0",
+   '/'  => "0 0 0",
+   '\\' => "0 0 0",
+},
+edge_fudge => {
+  '-'  =>  -2.5,
+   '/'  => 2.5,
+   ','  => 2.5,
+   '\\' => 2.5,
+   '`' => 2.5,
+},
+multiple_edges => 1,
+unit_vectors =>   {'-'  => [1,0] ,
+		   '|'  => [0,-1] ,
+		   '.'  => [1,0] ,
+		   ':'  => [0,-2] ,
+		   '/'  => [0.5, sqrt(3)/2], 
+		   ','  => [0.5, sqrt(3)/2], 
+		   '\\' => [0.5, -sqrt(3)/2],
+		   '`' => [0.5, -sqrt(3)/2]},
+
+label_offsets =>  {'-'  => [12,-12], 
+                   '|'  => [5,-5],
+		   '.'  => [5,-5], 
+                   ':'  => [5,-5],
+		   '/'  => [5,-4], 
+		   ','  => [5,-4], 
+		   '\\' => [5,-7],
+		   '`' => [5,-7] },
+
+
+global_label_fudge_factor => '8,0',
+do_not_render_vertices => 1,
+vertex_radius => 1,
+
+raw_text_output_only => 1,
+find_hexagons => 1,
+
+vertex_colour => {x=>1, X=>0   },
+first_vertex => 'V(0)(20)',
+
+
+LABELS
+
