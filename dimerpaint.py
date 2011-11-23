@@ -1,6 +1,7 @@
 #!/usr/bin/python -tt
 
 import pickle
+import copy
 import sys
 import math
 import pygame
@@ -219,13 +220,29 @@ def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset,
         if rhomb_edges[edge] == 1:
             render_edge(dualcoords, edge, xoffset, yoffset, colour, 2)
 
-# Redraw doubled edges in a pair of matchings.
+# Draw doubled edges in a pair of matchings.
 def render_doubled_edges(coords, matchings, xoffset, yoffset, colors):
     m1 = matchings[0]
     m2 = matchings[1]
     for e in m1.keys():
         if(e in m2):
             render_double_edge(coords, e, xoffset, yoffset, colors)
+
+# Draw edges that are not doubled in a pair of matchings.
+def render_xor_edges(coords, matchings, xoffset, yoffset, colors):
+    boxes = []
+    m0 = matchings[0]
+    m1 = matchings[1]
+    for e in m0.keys():
+        if e not in m1:
+            bb = render_edge(coords, e, xoffset, yoffset, colors[0])        
+            boxes.append(("matchededge", e, 0, bb))
+    for e in m1.keys():
+        if e not in m0:
+            bb = render_edge(coords, e, xoffset, yoffset, colors[1])        
+            boxes.append(("matchededge", e, 1, bb))
+    return boxes
+
 
 #===================================================================
 # Create a button, with given text and center, and a callback function
@@ -301,6 +318,15 @@ def showhide_callback(args):
     show = args["show"]
     print "Toggle ", layer
     show[layer] = not show[layer]
+
+# Toggle visibility of one of the 3 displays; resize pictures.
+def showhide_picture_callback(args):
+    renderables = args["renderables"]
+    picture = args["picture"]
+    show = renderables["show"]
+    print "Toggle entire picture", picture
+    show[picture] = not show[picture]
+    compute_picture_sizes(renderables)
     
 def render_dimer_buttons(x,y, side, renderables, font):
     buttons = []
@@ -360,7 +386,14 @@ def render_os_buttons(x, y, filenames, renderables, window, font):
                             "filenames":filenames, 
                             "renderables":renderables }) for f in files])
     return draw_button_row(x,y,5,font,buttonrow)
-    
+
+def render_showhide_buttons(x,y, renderables, window, font):
+    buttonrow = [
+        ("A picture", showhide_picture_callback, {"picture":"A", "renderables":renderables} ),
+        ("AB picture", showhide_picture_callback,{"picture":"Center", "renderables":renderables} ),
+        ("B picture", showhide_picture_callback, {"picture":"B", "renderables":renderables} ),
+    ]
+    return draw_button_row(x,y,5,font,buttonrow)
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
 def render_everything(renderables,filenames,font):
@@ -376,62 +409,67 @@ def render_everything(renderables,filenames,font):
     y = lengths["y"]
     xA =lengths["xA"]
     xB = lengths["xB"]
-    xDouble = lengths["xDouble"]
+    xCenter = lengths["xCenter"]
     window = lengths["window"]
 
     screen.fill(white)
     
     boxes = []
-    if show["A_background"]:
-        boxes += render_background(coords, rhombi, xA, y, 0)
-    if show["A_boxes"]:
-        render_boxes(dualcoords, rhombi, matchings,0,xA, y, black)
-    if show["A_tiling"]:
-        render_tiling(dualcoords, rhombi, matchings,0, xA, y, black)
-    if show["A_matching"]:
-        render_matching(coords, matchings,0, xA, y, black)
-    if show["A_boundary"]:
-        render_boundary(dualcoords, rhombi, matchings, 0, xA, y, black)
-    if show["A_centers"]:
-        boxes += render_active_hex_centers(coords, hexagons, matchings[0], 
-            xA, y, 0)
 
-    if show["B_background"]:
-        boxes += render_background(coords, rhombi, xB, y, 1)
-    if show["B_boxes"]:
-        render_boxes(dualcoords, rhombi, matchings,1,xB, y, red)
-    if show["B_tiling"]:
-        render_tiling(dualcoords, rhombi, matchings, 1, xB, y, red)
-    if show["B_matching"]:
-        render_matching(coords, matchings,1, xB, y, red)
-    if show["B_boundary"]:
-        render_boundary(dualcoords, rhombi, matchings, 1, xB, y, red)
-    if show["B_centers"]:
-        boxes += render_active_hex_centers(coords, hexagons, matchings[1], 
-            xB, y, 1)
+    if show["A"]:
+        if show["A_background"]:
+            boxes += render_background(coords, rhombi, xA, y, 0)
+        if show["A_boxes"]:
+            render_boxes(dualcoords, rhombi, matchings,0,xA, y, black)
+        if show["A_tiling"]:
+            render_tiling(dualcoords, rhombi, matchings,0, xA, y, black)
+        if show["A_matching"]:
+            render_matching(coords, matchings,0, xA, y, black)
+        if show["A_boundary"]:
+            render_boundary(dualcoords, rhombi, matchings, 0, xA, y, black)
+        if show["A_centers"]:
+            boxes += render_active_hex_centers(coords, hexagons, matchings[0], 
+                xA, y, 0)
+        boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font)
 
-    if show["center_background"]:
-        render_background(coords, rhombi, xDouble, y, 1)
-    if show["center_A_boundary"]:
-        render_boundary(dualcoords, rhombi, matchings, 0, xDouble, y, black)
-    if show["center_B_boundary"]:
-        render_boundary(dualcoords, rhombi, matchings, 1, xDouble, y, red)
-    if show["center_A_matching"]:
-        boxes += render_matching(coords, matchings,0, xDouble, y, black)
-    if show["center_B_matching"]:
-        boxes += render_matching(coords, matchings,1, xDouble, y, red)
-    if show["center_A_matching"] and show["center_B_matching"]:
-        if show["center_doubled_edges"]: 
-            render_doubled_edges(coords, matchings, xDouble, y, [black, red])
-        else:
-            render_doubled_edges(coords, matchings, xDouble, y, [white, white])
+    if show["B"]:
+        if show["B_background"]:
+            boxes += render_background(coords, rhombi, xB, y, 1)
+        if show["B_boxes"]:
+            render_boxes(dualcoords, rhombi, matchings,1,xB, y, red)
+        if show["B_tiling"]:
+            render_tiling(dualcoords, rhombi, matchings, 1, xB, y, red)
+        if show["B_matching"]:
+            render_matching(coords, matchings,1, xB, y, red)
+        if show["B_boundary"]:
+            render_boundary(dualcoords, rhombi, matchings, 1, xB, y, red)
+        if show["B_centers"]:
+            boxes += render_active_hex_centers(coords, hexagons, matchings[1], 
+                xB, y, 1)
+        boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font)
 
+    if show["Center"]:
+        if show["center_background"]:
+            render_background(coords, rhombi, xCenter, y, 1)
+        if show["center_A_boundary"]:
+            render_boundary(dualcoords, rhombi, matchings, 0, xCenter, y, black)
+        if show["center_B_boundary"]:
+            render_boundary(dualcoords, rhombi, matchings, 1, xCenter, y, red)
 
-    
-    boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font)
-    boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font)
-    boxes += render_center_buttons(10+xDouble, 10, renderables, font)
-    boxes += render_os_buttons(10,580,filenames,renderables,window,font)
+        if show["center_A_matching"] and not show["center_B_matching"]:
+            boxes += render_matching(coords, matchings,0, xCenter, y, black)
+        if show["center_B_matching"] and not show["center_A_matching"]:
+            boxes += render_matching(coords, matchings,1, xCenter, y, red)
+        if show["center_A_matching"] and show["center_B_matching"]:
+            boxes += render_xor_edges(coords, matchings, xCenter, y, [black, red])
+            if show["center_doubled_edges"]: 
+                render_doubled_edges(coords, matchings, xCenter, y, [black, red])
+        boxes += render_center_buttons(10+xCenter, 10, renderables, font)
+
+    y1 = lengths["screen_height"] - lengths["button_height"]
+    y2 = y1 - lengths["button_height"]
+    boxes += render_os_buttons(10,y1,filenames,renderables,window,font)
+    boxes += render_showhide_buttons(10,y2, renderables, window, font)
     pygame.display.flip()
     return boxes
 
@@ -601,6 +639,17 @@ def maximize(matching, hexlist):
                 finished = False
 
 #====================================================================
+# Find the aspect ration of one of our pictures.  
+def aspectratio(coords):
+    xvalues = [v[0] for v in coords.values()]
+    yvalues = [v[1] for v in coords.values()]
+    xmin = min(xvalues) + 0.0
+    ymin = min(yvalues) + 0.0
+    xmax = max(xvalues) + 0.0
+    ymax = max(yvalues) + 0.0
+    return (xmax-xmin)/(ymax-ymin)
+
+#====================================================================
 # Find the minimum matching, with respect to height function.
 def minimize(matching, hexlist):
     activelist = []
@@ -650,16 +699,60 @@ def save(basename, renderables):
     lengthsfile.close()
 
 #===================================================================
+# Compute the proper scale and locations of pictures, based on the
+# screen size and all the things we need to draw.
+def compute_picture_sizes(renderables):
+    lengths = renderables["lengths"]
+    show = renderables["show"]
+    picturecount = 0
+    if show["A"]: picturecount += 1
+    if show["B"]: picturecount += 1
+    if show["Center"]: picturecount += 1
+
+    screensize = screen.get_size()
+    height = screensize[1] - 4*lengths["button_height"]
+    width = screensize[0]
+
+    window = width
+    if picturecount > 0:
+        window = int(screensize[0] / picturecount)
+    aspect = aspectratio(renderables["dualcoords"])
+    if int(height * aspect) < window:
+        window = int(height * aspect)
+
+    lengths["screen_width"] = screensize[0]
+    lengths["screen_height"] = screensize[1]
+    lengths["window"] = window
+
+# Compute x coordinates at which to draw pictures
+    lengths["xA"] = int((width - window * picturecount)/2)
+    if(show["A"]):
+        lengths["xCenter"] = lengths["xA"] + window
+    else:
+        lengths["xCenter"] = lengths["xA"]
+    if(show["Center"]):
+        lengths["xB"] = lengths["xCenter"] + window
+    else:
+        lengths["xB"] = lengths["xCenter"]
+
+    renderables["coords"] = copy.deepcopy(renderables["unscaled_coords"])
+    renderables["dualcoords"] = copy.deepcopy(renderables["unscaled_dualcoords"])
+    rescale(renderables["coords"], renderables["dualcoords"], window)
+
+
+#===================================================================
 # Load a dimerpaint configuration.
 def load(basename):
     if not os.path.isdir(basename):
         exit("Can't find "+basename)
 
     coords = read_vertices(basename + "full.vertex")
+    unscaled_coords = copy.deepcopy(coords)
     background = read_edges(basename + "full.edge")
     hexagons = read_hexagons(basename + "full.hexagon")
-    dualcoords = read_vertices(basename + "full.dualvertex");
-    rhombi = read_rhombi(basename + "full.rhombus");
+    dualcoords = read_vertices(basename + "full.dualvertex")
+    unscaled_dualcoords = copy.deepcopy(dualcoords)
+    rhombi = read_rhombi(basename + "full.rhombus")
 
     matching_A = read_edges(basename + "A.edge")
     matching_B = read_edges(basename + "B.edge")
@@ -671,6 +764,10 @@ def load(basename):
         showfile.close()
     else:
         show = {
+            "A": True,
+            "B": True,
+            "Center": True,
+
             "A_background": True,
             "A_matching": True,
             "A_tiling": False,
@@ -690,38 +787,45 @@ def load(basename):
             "center_B_matching": True,
             "center_A_boundary": True,
             "center_B_boundary": True,
-            "center_doubled_edges": False,
+            "center_doubled_edges": True,
         }
     if os.path.isfile(basename + "lengths.pkl"):
         lengthsfile = open(basename + "lengths.pkl", "rb")
         lengths = pickle.load(lengthsfile)
         lengthsfile.close()
     else:
-        window = 430
         lengths = {
+            "button_height": 20,
             "y": 45,
-            "xA":  0,
-            "xB": 2*window,
-            "xDouble": window,
-            "window":window
             }
-    window = lengths["window"]
-    rescale(coords, dualcoords, window)
-    return  {"background":background, 
+    renderables = {"background":background, 
                    "matchings":matchings, 
                    "hexagons":hexagons, 
                    "rhombi": rhombi,
                    "coords": coords,
+                   "unscaled_coords": coords,
                    "dualcoords":dualcoords,
+                   "unscaled_dualcoords":dualcoords,
                    "show":show,
                    "lengths":lengths}
+    compute_picture_sizes(renderables)
+    return renderables
 
 
 #===================================================================
 # Main program
 
-if(len(sys.argv) != 3):
+if len(sys.argv) != 3:
     exit("usage: dimerpaint (data directory) <input file>")
+
+pygame.init()
+pygame.font.init()
+font = pygame.font.Font(None, 18)
+screen=pygame.display.set_mode([1350,600], pygame.RESIZABLE)
+done=False #Loop until the user clicks the close button.
+clock=pygame.time.Clock() # Used to manage how fast the screen updates
+
+
 
 data_directory = sys.argv[1]
 input_file = sys.argv[2]
@@ -731,16 +835,6 @@ filenames = {   "data_directory":sys.argv[1],
                 "basename":sys.argv[1] + "/" + sys.argv[2] + "/" } 
 
 renderables = load(filenames["basename"])
-
-pygame.init()
-pygame.font.init()
-font = pygame.font.Font(None, 18)
-
-screen=pygame.display.set_mode([1350,600])
-done=False #Loop until the user clicks the close button.
-clock=pygame.time.Clock() # Used to manage how fast the screen updates
-
-
 
 bounding_box_data = render_everything(renderables,filenames,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
@@ -752,6 +846,12 @@ while done==False:
     for event in pygame.event.get(): # User did something
         if event.type == pygame.QUIT: # If user clicked close
             done=True # Flag that we are done so we exit this loop
+        if event.type == pygame.VIDEORESIZE:
+            print "user resized screen"
+            screen=pygame.display.set_mode(event.size, pygame.RESIZABLE)
+            compute_picture_sizes(renderables)
+            bounding_box_data = render_everything(renderables, filenames,font)
+            bounding_boxes = [record[3] for record in bounding_box_data]
         if event.type == pygame.MOUSEBUTTONUP:
             radius = 1
             ul = (event.pos[0] - radius, event.pos[1] - radius)
