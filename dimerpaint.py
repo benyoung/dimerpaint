@@ -105,10 +105,10 @@ def render_hexagon_center(coords, h, xoffset, yoffset):
     x = int((coords[h[0]][0] + coords[h[3]][0])/2 + xoffset)
     y = int((coords[h[0]][1] + coords[h[3]][1])/2 + yoffset)
 
-    return pygame.draw.circle(screen, green, (x,y), 4)
+    return pygame.draw.circle(screen, green, (x,y), 9)
 
 # Draw an edge in a given color
-def render_edge(coords, edge, xoffset, yoffset, colour, width=4):
+def render_edge(coords, edge, xoffset, yoffset, colour, width=7):
     e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
     p0 = (p0[0] + xoffset, p0[1] + yoffset)
@@ -131,16 +131,18 @@ def render_double_edge(coords, edge, xoffset, yoffset, colours):
     normal_x = float(p1[1] - p0[1])
     normal_y = float(p0[0] - p1[0])
     normal_length = math.sqrt(normal_x*normal_x + normal_y*normal_y)
-    normal_x *= 1.5/normal_length
-    normal_y *= 1.5/normal_length
+    normal_x *= 3.5/normal_length
+    normal_y *= 3.5/normal_length
+    #normal_x *= 1.5/normal_length
+    #normal_y *= 1.5/normal_length
 
     q0 = (p0[0] + xoffset + int(normal_x), p0[1] + yoffset + int(normal_y))
     q1 = (p1[0] + xoffset + int(normal_x), p1[1] + yoffset + int(normal_y))
-    bb1 = pygame.draw.line(screen, colours[0], q0, q1, 4)
+    bb1 = pygame.draw.line(screen, colours[0], q0, q1, 6)
 
     q0 = (p0[0] + xoffset - int(normal_x), p0[1] + yoffset - int(normal_y))
     q1 = (p1[0] + xoffset - int(normal_x), p1[1] + yoffset - int(normal_y))
-    bb2 = pygame.draw.line(screen, colours[1], q0, q1, 4)
+    bb2 = pygame.draw.line(screen, colours[1], q0, q1, 6)
 
     return bb1.union(bb2)
 
@@ -285,7 +287,7 @@ def load_callback(args):
     f["basename"] = new_basename
 
     renderables = args["renderables"]
-    new_renderables = load(filenames["basename"], args["window"])
+    new_renderables = load(filenames["basename"])
     for item in new_renderables.keys():
         renderables[item] = new_renderables[item]
     print "Looks like I loaded it successfully"
@@ -356,8 +358,7 @@ def render_os_buttons(x, y, filenames, renderables, window, font):
                         load_callback, 
                         {   "myname":f, 
                             "filenames":filenames, 
-                            "renderables":renderables,
-                            "window":window}) for f in files])
+                            "renderables":renderables }) for f in files])
     return draw_button_row(x,y,5,font,buttonrow)
     
 #=============================================================
@@ -370,13 +371,13 @@ def render_everything(renderables,filenames,font):
     coords = renderables["coords"]
     dualcoords = renderables["dualcoords"]
     show = renderables["show"]
-    positions = renderables["positions"]
+    lengths = renderables["lengths"]
      
-    y = positions["y"]
-    xA =positions["xA"]
-    xB = positions["xB"]
-    xDouble = positions["xDouble"]
-    window = positions["window"]
+    y = lengths["y"]
+    xA =lengths["xA"]
+    xB = lengths["xB"]
+    xDouble = lengths["xDouble"]
+    window = lengths["window"]
 
     screen.fill(white)
     
@@ -410,7 +411,7 @@ def render_everything(renderables,filenames,font):
             xB, y, 1)
 
     if show["center_background"]:
-        boxes += render_background(coords, rhombi, xDouble, y, 1)
+        render_background(coords, rhombi, xDouble, y, 1)
     if show["center_A_boundary"]:
         render_boundary(dualcoords, rhombi, matchings, 0, xDouble, y, black)
     if show["center_B_boundary"]:
@@ -638,15 +639,19 @@ def dualcoords(hexlist):
 def save(basename, renderables):
     matchings = renderables["matchings"]
     show = renderables["show"]
+    lengths = renderables["lengths"]
     write_edges(matchings[0], basename + "A.edge")
     write_edges(matchings[1], basename + "B.edge")
     showfile = open(basename + "show.pkl", "wb")
     pickle.dump(show, showfile)
     showfile.close()
+    lengthsfile = open(basename + "lengths.pkl", "wb")
+    pickle.dump(lengths, lengthsfile)
+    lengthsfile.close()
 
 #===================================================================
 # Load a dimerpaint configuration.
-def load(basename, window):
+def load(basename):
     if not os.path.isdir(basename):
         exit("Can't find "+basename)
 
@@ -687,14 +692,20 @@ def load(basename, window):
             "center_B_boundary": True,
             "center_doubled_edges": False,
         }
-    positions = {
-        "y": 45,
-        "xA":  0,
-        "xB": 2*window,
-        "xDouble": window,
-        "window":window
-        }
-
+    if os.path.isfile(basename + "lengths.pkl"):
+        lengthsfile = open(basename + "lengths.pkl", "rb")
+        lengths = pickle.load(lengthsfile)
+        lengthsfile.close()
+    else:
+        window = 430
+        lengths = {
+            "y": 45,
+            "xA":  0,
+            "xB": 2*window,
+            "xDouble": window,
+            "window":window
+            }
+    window = lengths["window"]
     rescale(coords, dualcoords, window)
     return  {"background":background, 
                    "matchings":matchings, 
@@ -703,14 +714,14 @@ def load(basename, window):
                    "coords": coords,
                    "dualcoords":dualcoords,
                    "show":show,
-                   "positions":positions}
+                   "lengths":lengths}
 
 
 #===================================================================
 # Main program
 
 if(len(sys.argv) != 3):
-    exit("usage: dimerpaint (data directory) (input file)")
+    exit("usage: dimerpaint (data directory) <input file>")
 
 data_directory = sys.argv[1]
 input_file = sys.argv[2]
@@ -719,8 +730,7 @@ filenames = {   "data_directory":sys.argv[1],
                 "input_file":sys.argv[2],
                 "basename":sys.argv[1] + "/" + sys.argv[2] + "/" } 
 
-window = 430 # width of one of the 3 pictures.
-renderables = load(filenames["basename"], window)
+renderables = load(filenames["basename"])
 
 pygame.init()
 pygame.font.init()
