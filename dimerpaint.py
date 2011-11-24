@@ -125,25 +125,23 @@ def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width=2):
         coordslist.append(p0)
     pygame.draw.polygon(screen, colour, coordslist, width)
 
-def render_double_edge(coords, edge, xoffset, yoffset, colours):
+def render_double_edge(coords, edge, xoffset, yoffset, colours, width):
     e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
     p1 = coords[e[1]] 
     normal_x = float(p1[1] - p0[1])
     normal_y = float(p0[0] - p1[0])
     normal_length = math.sqrt(normal_x*normal_x + normal_y*normal_y)
-    normal_x *= 3.5/normal_length
-    normal_y *= 3.5/normal_length
-    #normal_x *= 1.5/normal_length
-    #normal_y *= 1.5/normal_length
+    normal_x *= width/2.0/normal_length
+    normal_y *= width/2.0/normal_length
 
     q0 = (p0[0] + xoffset + int(normal_x), p0[1] + yoffset + int(normal_y))
     q1 = (p1[0] + xoffset + int(normal_x), p1[1] + yoffset + int(normal_y))
-    bb1 = pygame.draw.line(screen, colours[0], q0, q1, 6)
+    bb1 = pygame.draw.line(screen, colours[0], q0, q1, width)
 
     q0 = (p0[0] + xoffset - int(normal_x), p0[1] + yoffset - int(normal_y))
     q1 = (p1[0] + xoffset - int(normal_x), p1[1] + yoffset - int(normal_y))
-    bb2 = pygame.draw.line(screen, colours[1], q0, q1, 6)
+    bb2 = pygame.draw.line(screen, colours[1], q0, q1, width)
 
     return bb1.union(bb2)
 
@@ -164,10 +162,13 @@ def render_background(coords, graph, xoffset, yoffset, which_side):
 
 
 # Draw a matching.
-def render_matching(coords, matchings, which_side, xoffset, yoffset, color):
+def render_matching(renderables, which_side, xoffset, yoffset, color):
+    coords = renderables["coords"] 
+    matchings = renderables["matchings"]
+    lengths = renderables["lengths"]
     boundingboxes = []
     for e in matchings[which_side].keys():
-        bb = render_edge(coords, e, xoffset, yoffset, color)        
+        bb = render_edge(coords, e, xoffset, yoffset, color, lengths["dimer_width"])        
         bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
         boundingboxes.append(("matchededge", e, which_side, bb))
     return boundingboxes
@@ -221,25 +222,31 @@ def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset,
             render_edge(dualcoords, edge, xoffset, yoffset, colour, 2)
 
 # Draw doubled edges in a pair of matchings.
-def render_doubled_edges(coords, matchings, xoffset, yoffset, colors):
+def render_doubled_edges(renderables, xoffset, yoffset, colors):
+    coords = renderables["coords"] 
+    matchings = renderables["matchings"]
+    lengths = renderables["lengths"]
     m1 = matchings[0]
     m2 = matchings[1]
     for e in m1.keys():
         if(e in m2):
-            render_double_edge(coords, e, xoffset, yoffset, colors)
+            render_double_edge(coords, e, xoffset, yoffset, colors, lengths["dimer_width"])
 
 # Draw edges that are not doubled in a pair of matchings.
-def render_xor_edges(coords, matchings, xoffset, yoffset, colors):
+def render_xor_edges(renderables, xoffset, yoffset, colors):
+    coords = renderables["coords"]
+    matchings = renderables["matchings"]
+    lengths = renderables["lengths"]
     boxes = []
     m0 = matchings[0]
     m1 = matchings[1]
     for e in m0.keys():
         if e not in m1:
-            bb = render_edge(coords, e, xoffset, yoffset, colors[0])        
+            bb = render_edge(coords, e, xoffset, yoffset, colors[0], lengths["dimer_width"])        
             boxes.append(("matchededge", e, 0, bb))
     for e in m1.keys():
         if e not in m0:
-            bb = render_edge(coords, e, xoffset, yoffset, colors[1])        
+            bb = render_edge(coords, e, xoffset, yoffset, colors[1], lengths["dimer_width"])        
             boxes.append(("matchededge", e, 1, bb))
     return boxes
 
@@ -260,6 +267,7 @@ def drawbutton(pos, label, font, callback, args):
     pygame.draw.rect(screen, black, bb, 1)
     return ("button", args, callback, bb)
 
+
 # Draw a row of buttons.  Return a list of their bounding boxes.
 # Argumnet is a list of pairs: (name, callback, args)
 
@@ -272,6 +280,28 @@ def draw_button_row(x, y, spacing, font, buttondata):
         x_current += bb[3].width + spacing
         boundingboxes.append(bb)
     return boundingboxes
+
+# Draw a plus/minus button for adjusting lengths.
+def draw_adjuster(pos, label, quantity, amount, lengths,font):
+    buttons = [
+        ("-"+str(amount), adjust_callback, {"quantity":quantity, "amount":-amount, "lengths":lengths}),
+        (label, null_callback, {}),
+        ("+"+str(amount), adjust_callback, {"quantity":quantity, "amount":amount,"lengths":lengths}),
+        ]
+    return draw_button_row(pos[0], pos[1], -1, font, buttons)
+
+# Draw a row of plus/minus buttons for adjusting lengths.
+# The last argument is a list of tuples: (label, quantity, amount)
+def draw_adjuster_row(x, y, spacing, lengths, font, adjusterlist):
+    boundingboxes = []
+    x_current = x
+    for adjuster in adjusterlist:
+        pos = (x_current, y)
+        bb = draw_adjuster(pos, adjuster[0], adjuster[1], adjuster[2], lengths, font) 
+        x_current += bb[0][3].width + bb[1][3].width + bb[2][3].width -2 + spacing
+        boundingboxes.extend(bb)
+    return boundingboxes
+
 
 def test_callback(args):
     print "Clicked test button on side" , args["side"]
@@ -287,6 +317,15 @@ def minimize_callback(args):
 def randomize_callback(args):
     print "Clicked randomize button on side", args["side"]
     randomize(args["matching"], args["hexagons"])
+
+def adjust_callback(args):
+    lengths = args["lengths"]
+    quantity = args["quantity"]
+    amount = args["amount"]
+    lengths[quantity] += amount
+
+def null_callback(args):
+    pass
 
 def quit_callback(args):
     print "Quit button clicked."
@@ -394,6 +433,13 @@ def render_showhide_buttons(x,y, renderables, window, font):
         ("B picture", showhide_picture_callback, {"picture":"B", "renderables":renderables} ),
     ]
     return draw_button_row(x,y,5,font,buttonrow)
+
+def render_global_adjusters(x,y, renderables, window, font):
+    adjusterlist = [
+        ("Dimer width", "dimer_width", 1)
+    ]
+    return draw_adjuster_row(x,y,5,renderables["lengths"],font,  adjusterlist)
+
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
 def render_everything(renderables,filenames,font):
@@ -424,7 +470,7 @@ def render_everything(renderables,filenames,font):
         if show["A_tiling"]:
             render_tiling(dualcoords, rhombi, matchings,0, xA, y, black)
         if show["A_matching"]:
-            render_matching(coords, matchings,0, xA, y, black)
+            render_matching(renderables,0, xA, y, black)
         if show["A_boundary"]:
             render_boundary(dualcoords, rhombi, matchings, 0, xA, y, black)
         if show["A_centers"]:
@@ -440,7 +486,7 @@ def render_everything(renderables,filenames,font):
         if show["B_tiling"]:
             render_tiling(dualcoords, rhombi, matchings, 1, xB, y, red)
         if show["B_matching"]:
-            render_matching(coords, matchings,1, xB, y, red)
+            render_matching(renderables,1, xB, y, red)
         if show["B_boundary"]:
             render_boundary(dualcoords, rhombi, matchings, 1, xB, y, red)
         if show["B_centers"]:
@@ -457,19 +503,21 @@ def render_everything(renderables,filenames,font):
             render_boundary(dualcoords, rhombi, matchings, 1, xCenter, y, red)
 
         if show["center_A_matching"] and not show["center_B_matching"]:
-            boxes += render_matching(coords, matchings,0, xCenter, y, black)
+            boxes += render_matching(renderables,0, xCenter, y, black)
         if show["center_B_matching"] and not show["center_A_matching"]:
-            boxes += render_matching(coords, matchings,1, xCenter, y, red)
+            boxes += render_matching(renderables,1, xCenter, y, red)
         if show["center_A_matching"] and show["center_B_matching"]:
-            boxes += render_xor_edges(coords, matchings, xCenter, y, [black, red])
+            boxes += render_xor_edges(renderables, xCenter, y, [black, red])
             if show["center_doubled_edges"]: 
-                render_doubled_edges(coords, matchings, xCenter, y, [black, red])
+                render_doubled_edges(renderables, xCenter, y, [black, red])
         boxes += render_center_buttons(10+xCenter, 10, renderables, font)
 
-    y1 = lengths["screen_height"] - lengths["button_height"]
-    y2 = y1 - lengths["button_height"]
-    boxes += render_os_buttons(10,y1,filenames,renderables,window,font)
-    boxes += render_showhide_buttons(10,y2, renderables, window, font)
+    y = lengths["screen_height"] - lengths["button_height"]
+    boxes += render_os_buttons(10,y,filenames,renderables,window,font)
+    y -= lengths["button_height"]
+    boxes += render_showhide_buttons(10,y, renderables, window, font)
+    y -= lengths["button_height"]
+    boxes += render_global_adjusters(10, y, renderables, window, font)
     pygame.display.flip()
     return boxes
 
@@ -789,13 +837,16 @@ def load(basename):
             "center_B_boundary": True,
             "center_doubled_edges": True,
         }
-    if os.path.isfile(basename + "lengths.pkl"):
-        lengthsfile = open(basename + "lengths.pkl", "rb")
-        lengths = pickle.load(lengthsfile)
-        lengthsfile.close()
-    else:
+# DEBUG
+    #if os.path.isfile(basename + "lengths.pkl"):
+    #    lengthsfile = open(basename + "lengths.pkl", "rb")
+    #    lengths = pickle.load(lengthsfile)
+    #    lengthsfile.close()
+    #else:
+    if True:
         lengths = {
             "button_height": 20,
+            "dimer_width":4,
             "y": 45,
             }
     renderables = {"background":background, 
