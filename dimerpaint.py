@@ -102,46 +102,111 @@ def read_rhombi(filename):
     f.close()
     return rhombi
 
-def render_hexagon_center(coords, h, xoffset, yoffset):
+def render_hexagon_center(coords, h, xoffset, yoffset, radius, eps):
     x = int((coords[h[0]][0] + coords[h[3]][0])/2 + xoffset)
     y = int((coords[h[0]][1] + coords[h[3]][1])/2 + yoffset)
 
-    return pygame.draw.circle(screen, green, (x,y), 9)
+# I'm supposed to render these in eps I guess?  Cant think why right now
+    return pygame.draw.circle(screen, green, (x,y), radius)
 
 # Draw an edge in a given color
-def render_edge(coords, edge, xoffset, yoffset, colour, width=7):
+def render_edge(coords, edge, xoffset, yoffset, colour, width, eps):
+    e = [endpt for endpt in edge]
+    n = normal(coords, edge, width/2.0)
+
+    p0 = coords[e[0]] 
+    p1 = coords[e[1]] 
+    p2 = coords[e[1]] 
+    p3 = coords[e[0]] 
+
+    eps["coords"].extend([p0, p1]) 
+    ps = "%f %f %f setrgbcolor " %(colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0) 
+    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width, p0[0], p0[1], p1[0], p1[1])
+    eps["ps"].append(ps)
+
+    p0 = (p0[0] + xoffset + n[0], p0[1] + yoffset + n[1])
+    p1 = (p1[0] + xoffset + n[0], p1[1] + yoffset + n[1])
+    p2 = (p2[0] + xoffset - n[0], p2[1] + yoffset - n[1])
+    p3 = (p3[0] + xoffset - n[0], p3[1] + yoffset - n[1])
+    
+    #return pygame.draw.line(screen, colour, p0, p1, width)
+    return pygame.draw.polygon(screen, colour, [p0,p1,p2,p3], 0)
+
+def render_line(coords, edge, xoffset, yoffset, colour, width, eps):
     e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
-    p0 = (p0[0] + xoffset, p0[1] + yoffset)
     p1 = coords[e[1]] 
+
+    eps["coords"].extend([p0,p1])
+    ps = "%f %f %f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
+    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width, p0[0], p0[1], p1[0], p1[1])
+    eps["ps"].append(ps)
+
+    p0 = (p0[0] + xoffset, p0[1] + yoffset)
     p1 = (p1[0] + xoffset, p1[1] + yoffset)
+
+
     return pygame.draw.line(screen, colour, p0, p1, width)
 
-def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width=2):
+
+def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width, eps):
     coordslist = []
     for p in rhomb:
         p0 = dualcoords[p] 
-        p0 = (p0[0] + xoffset, p0[1] + yoffset)
         coordslist.append(p0)
-    pygame.draw.polygon(screen, colour, coordslist, width)
 
-def render_double_edge(coords, edge, xoffset, yoffset, colours, width):
+
+    eps["coords"].extend(coordslist) 
+    flatlist = []
+    for p in coordslist:
+        flatlist.extend([p[0],p[1]])
+    ps = "%f %f %f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
+    ps += "newpath %d %d moveto %d %d lineto %d %d lineto %d %d lineto closepath" % tuple(flatlist)
+    if width==0:
+        ps += " fill"
+    else:
+        ps = ("%d setlinewidth " % width) + ps + " stroke"
+    eps["ps"].append(ps)
+
+    shiftedcoordslist = []
+    for p0 in coordslist:
+        p0 = (p0[0] + xoffset, p0[1] + yoffset)
+        shiftedcoordslist.append(p0)
+    pygame.draw.polygon(screen, colour, shiftedcoordslist, width)
+
+
+
+# Compute an integer normal vector to an edge of a given magnitude.
+# The edge can be implemented as a list, tuple or set of points, of length 2.
+def normal(coords, edge, magnitude):
     e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
     p1 = coords[e[1]] 
     normal_x = float(p1[1] - p0[1])
     normal_y = float(p0[0] - p1[0])
     normal_length = math.sqrt(normal_x*normal_x + normal_y*normal_y)
-    normal_x *= width/2.0/normal_length
-    normal_y *= width/2.0/normal_length
+    normal_x *= magnitude/normal_length
+    normal_y *= magnitude/normal_length
+    return (int(normal_x), int(normal_y))
 
-    q0 = (p0[0] + xoffset + int(normal_x), p0[1] + yoffset + int(normal_y))
-    q1 = (p1[0] + xoffset + int(normal_x), p1[1] + yoffset + int(normal_y))
-    bb1 = pygame.draw.line(screen, colours[0], q0, q1, width)
+def render_double_edge(coords, edge, xoffset, yoffset, colours, width, eps):
+    e = [endpt for endpt in edge]
+    p0 = coords[e[0]] 
+    p1 = coords[e[1]] 
 
-    q0 = (p0[0] + xoffset - int(normal_x), p0[1] + yoffset - int(normal_y))
-    q1 = (p1[0] + xoffset - int(normal_x), p1[1] + yoffset - int(normal_y))
-    bb2 = pygame.draw.line(screen, colours[1], q0, q1, width)
+    norm = normal(coords, edge, width/2.0)
+
+    bb1 = render_edge(coords, edge, xoffset+norm[0], yoffset+norm[1], colours[0], width, eps)
+    bb2 = render_edge(coords, edge, xoffset-norm[0], yoffset-norm[1], colours[1], width, eps)
+
+    #q0 = (p0[0] + xoffset + norm[0], p0[1] + yoffset + norm[1])
+    #q1 = (p1[0] + xoffset + norm[0], p1[1] + yoffset + norm[1])
+
+    #bb1 = pygame.draw.line(screen, colours[0], q0, q1, width)
+
+    #q0 = (p0[0] + xoffset - norm[0], p0[1] + yoffset - norm[1])
+    #q1 = (p1[0] + xoffset - norm[0], p1[1] + yoffset - norm[1])
+    #bb2 = pygame.draw.line(screen, colours[1], q0, q1, width)
 
     return bb1.union(bb2)
 
@@ -151,10 +216,10 @@ def render_vertex(coords, v, xoffset, yoffset, colour):
     pygame.draw.circle(screen, colour, p, 2)
 
 # Draw the background.  Return bounding boxes, tagged by "A" or "B".
-def render_background(coords, graph, xoffset, yoffset, which_side):
+def render_background(coords, graph, xoffset, yoffset, which_side, eps):
     boundingboxes = []
     for e in graph.keys():
-        bb = render_edge(coords, e, xoffset, yoffset, grey, 1)        
+        bb = render_line(coords, e, xoffset, yoffset, grey, 1, eps)        
         bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
         #pygame.draw.rect(screen, green, bb, 1)  debug
         boundingboxes.append(("edge", e, which_side, bb))
@@ -162,20 +227,20 @@ def render_background(coords, graph, xoffset, yoffset, which_side):
 
 
 # Draw a matching.
-def render_matching(renderables, which_side, xoffset, yoffset, color):
+def render_matching(renderables, which_side, xoffset, yoffset, color, eps):
     coords = renderables["coords"] 
     matchings = renderables["matchings"]
     lengths = renderables["lengths"]
     boundingboxes = []
     for e in matchings[which_side].keys():
-        bb = render_edge(coords, e, xoffset, yoffset, color, lengths["dimer_width"])        
+        bb = render_edge(coords, e, xoffset, yoffset, color, lengths["dimer_width"], eps)        
         bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
         boundingboxes.append(("matchededge", e, which_side, bb))
     return boundingboxes
 
 # Draw the box pile corresponding to a matching.  This is basically like
 # drawing the tiling and then shading the tiles.
-def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color):
+def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color, eps):
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
@@ -189,24 +254,24 @@ def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, co
                 fillcolor_components[i] = 255 * (intensity)  + color[i] * (1-intensity)
 
             fillcolor = tuple(fillcolor_components)
-            render_rhombus(dualcoords, rhomb, xoffset, yoffset, fillcolor, 0)        
+            render_rhombus(dualcoords, rhomb, xoffset, yoffset, fillcolor, 0, eps)        
         except KeyError:
             pass
 
 # Draw the tiling corresponding to a matching.
-def render_tiling(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color):
+def render_tiling(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color, eps):
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
 
-            render_rhombus(dualcoords, rhomb, xoffset, yoffset, color)        
+            render_rhombus(dualcoords, rhomb, xoffset, yoffset, color, 2, eps)        
         except KeyError:
             pass
 
 # Draw the boundary of the matched region.  There's a cheap way to do this:
 # the boundary is all the edges in the dual graph that are singly covered by
 # a tile edge.
-def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, colour):
+def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, colour, eps):
     rhomb_edges = defaultdict(int)
     for edge in matchings[which_side].keys():
         try:
@@ -219,10 +284,10 @@ def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset,
             pass
     for edge in rhomb_edges.keys():
         if rhomb_edges[edge] == 1:
-            render_edge(dualcoords, edge, xoffset, yoffset, colour, 2)
+            render_line(dualcoords, edge, xoffset, yoffset, colour, 2, eps)
 
 # Draw doubled edges in a pair of matchings.
-def render_doubled_edges(renderables, xoffset, yoffset, colors):
+def render_doubled_edges(renderables, xoffset, yoffset, colors, eps):
     coords = renderables["coords"] 
     matchings = renderables["matchings"]
     lengths = renderables["lengths"]
@@ -230,10 +295,10 @@ def render_doubled_edges(renderables, xoffset, yoffset, colors):
     m2 = matchings[1]
     for e in m1.keys():
         if(e in m2):
-            render_double_edge(coords, e, xoffset, yoffset, colors, lengths["dimer_width"])
+            render_double_edge(coords, e, xoffset, yoffset, colors, lengths["dimer_width"],eps)
 
 # Draw edges that are not doubled in a pair of matchings.
-def render_xor_edges(renderables, xoffset, yoffset, colors):
+def render_xor_edges(renderables, xoffset, yoffset, colors,eps):
     coords = renderables["coords"]
     matchings = renderables["matchings"]
     lengths = renderables["lengths"]
@@ -242,11 +307,11 @@ def render_xor_edges(renderables, xoffset, yoffset, colors):
     m1 = matchings[1]
     for e in m0.keys():
         if e not in m1:
-            bb = render_edge(coords, e, xoffset, yoffset, colors[0], lengths["dimer_width"])        
+            bb = render_edge(coords, e, xoffset, yoffset, colors[0], lengths["dimer_width"],eps)     
             boxes.append(("matchededge", e, 0, bb))
     for e in m1.keys():
         if e not in m0:
-            bb = render_edge(coords, e, xoffset, yoffset, colors[1], lengths["dimer_width"])        
+            bb = render_edge(coords, e, xoffset, yoffset, colors[1], lengths["dimer_width"],eps)
             boxes.append(("matchededge", e, 1, bb))
     return boxes
 
@@ -323,9 +388,27 @@ def adjust_callback(args):
     quantity = args["quantity"]
     amount = args["amount"]
     lengths[quantity] += amount
+    if(lengths[quantity] < 0):
+        lengths[quantity] = 0
 
 def null_callback(args):
     pass
+
+def fullscreen_callback(args):
+    renderables = args["renderables"]
+
+    if "old_screen_size" in renderables["lengths"]:
+        pygame.display.set_mode(renderables["lengths"]["old_screen_size"], pygame.RESIZABLE)
+        compute_picture_sizes(renderables)
+        del renderables["lengths"]["old_screen_size"]
+    else:
+        modes = pygame.display.list_modes()
+        if modes:
+            renderables["lengths"]["old_screen_size"] = screen.get_size()
+            pygame.display.set_mode(modes[0], pygame.FULLSCREEN)
+            compute_picture_sizes(renderables)
+
+
 
 def quit_callback(args):
     print "Quit button clicked."
@@ -350,6 +433,33 @@ def load_callback(args):
 
 def eps_callback(args):
     print "Print to EPS button clicked"
+    coords = args["eps"]["coords"]
+    ps = args["eps"]["ps"]
+
+    xvalues = [v[0] for v in coords]
+    yvalues = [v[1] for v in coords]
+    xmin = min(xvalues)
+    ymin = min(yvalues)
+    xmax = max(xvalues)
+    ymax = max(yvalues)
+
+    yc = (ymin + ymax) / 2
+
+
+    headerlines = [
+        "%!PS-Adobe-3.0 EPSF-3.0",
+        "%%%%BoundingBox: %d %d %d %d" % (xmin, ymin, xmax, ymax),
+        "%%%%HiResBoundingBox: %d %d %d %d" % (xmin, ymin, xmax, ymax),
+        "%%EndComments",
+        "1 setlinecap", ]
+
+    epsfile = open("test.eps", "w")
+    for line in headerlines:
+        epsfile.write(line + "\n")
+    for line in ps:
+        epsfile.write(line + "\n")
+    epsfile.write("showpage\n")
+    epsfile.close
 
 # Toggle visibility of a layer
 def showhide_callback(args):
@@ -367,7 +477,7 @@ def showhide_picture_callback(args):
     show[picture] = not show[picture]
     compute_picture_sizes(renderables)
     
-def render_dimer_buttons(x,y, side, renderables, font):
+def render_dimer_buttons(x,y, side, renderables, font, eps):
     buttons = []
     matchings = renderables["matchings"] 
     hexagons = renderables["hexagons"]
@@ -392,10 +502,11 @@ def render_dimer_buttons(x,y, side, renderables, font):
         ("Randomize", randomize_callback, args),
         ("Minimize", minimize_callback, args),
         ("Maximize", maximize_callback, args),
+        ("EPS", eps_callback, {"eps":eps}),
         ]
     return buttons + draw_button_row(x, y+20, 5, font, buttonrow2)
 
-def render_center_buttons(x,y,renderables, font):
+def render_center_buttons(x,y,renderables, font, eps):
     buttons = []
     show = renderables["show"]
     buttonrow = [
@@ -406,18 +517,18 @@ def render_center_buttons(x,y,renderables, font):
     buttonrow2 = [
         ("Dimer B", showhide_callback, {"layer":"center_B_matching", "show":show} ),
         ("Border B", showhide_callback, {"layer":"center_B_boundary", "show":show} ),
-        ("Double edges", showhide_callback, {"layer":"center_doubled_edges", "show":show} )
+        ("Double edges", showhide_callback, {"layer":"center_doubled_edges", "show":show} ),
+        ("EPS", eps_callback, {"eps":eps}),
         ]
     buttons =  draw_button_row(x, y, 5, font, buttonrow)
     return buttons+draw_button_row(x, y+20, 5, font, buttonrow2)
 
-def render_os_buttons(x, y, filenames, renderables, window, font):
+def render_os_buttons(x, y, filenames, renderables, font):
     buttons = []
     datadir = filenames["data_directory"]
     files = os.listdir(datadir)
     buttonrow = [
         ("Quit", quit_callback, {}),
-        ("Print EPS", eps_callback, {}),
     ]
     buttonrow.extend([( f, 
                         load_callback, 
@@ -426,17 +537,19 @@ def render_os_buttons(x, y, filenames, renderables, window, font):
                             "renderables":renderables }) for f in files])
     return draw_button_row(x,y,5,font,buttonrow)
 
-def render_showhide_buttons(x,y, renderables, window, font):
+def render_showhide_buttons(x,y, renderables, font):
     buttonrow = [
         ("A picture", showhide_picture_callback, {"picture":"A", "renderables":renderables} ),
         ("AB picture", showhide_picture_callback,{"picture":"Center", "renderables":renderables} ),
         ("B picture", showhide_picture_callback, {"picture":"B", "renderables":renderables} ),
+        ("Full screen", fullscreen_callback, {"renderables":renderables}),
     ]
     return draw_button_row(x,y,5,font,buttonrow)
 
-def render_global_adjusters(x,y, renderables, window, font):
+def render_global_adjusters(x,y, renderables, font):
     adjusterlist = [
-        ("Dimer width", "dimer_width", 1)
+        ("Dimer width", "dimer_width", 1),
+        ("Center radius", "hex_flipper_radius", 1)
     ]
     return draw_adjuster_row(x,y,5,renderables["lengths"],font,  adjusterlist)
 
@@ -463,61 +576,64 @@ def render_everything(renderables,filenames,font):
     boxes = []
 
     if show["A"]:
+        epsA = {"coords":[], "ps":[]}
         if show["A_background"]:
-            boxes += render_background(coords, rhombi, xA, y, 0)
+            boxes += render_background(coords, rhombi, xA, y, 0, epsA)
         if show["A_boxes"]:
-            render_boxes(dualcoords, rhombi, matchings,0,xA, y, black)
+            render_boxes(dualcoords, rhombi, matchings,0,xA, y, black, epsA)
         if show["A_tiling"]:
-            render_tiling(dualcoords, rhombi, matchings,0, xA, y, black)
+            render_tiling(dualcoords, rhombi, matchings,0, xA, y, black, epsA)
         if show["A_matching"]:
-            render_matching(renderables,0, xA, y, black)
+            render_matching(renderables,0, xA, y, black, epsA)
         if show["A_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 0, xA, y, black)
+            render_boundary(dualcoords, rhombi, matchings, 0, xA, y, black, epsA)
         if show["A_centers"]:
-            boxes += render_active_hex_centers(coords, hexagons, matchings[0], 
-                xA, y, 0)
-        boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font)
+            boxes += render_active_hex_centers(renderables, xA, y, 0,epsA)
+        boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font, epsA)
+        renderables["epsA"] = epsA
 
     if show["B"]:
+        epsB = {"coords":[], "ps":[]}
         if show["B_background"]:
-            boxes += render_background(coords, rhombi, xB, y, 1)
+            boxes += render_background(coords, rhombi, xB, y, 1, epsB)
         if show["B_boxes"]:
-            render_boxes(dualcoords, rhombi, matchings,1,xB, y, red)
+            render_boxes(dualcoords, rhombi, matchings,1,xB, y, red, epsB)
         if show["B_tiling"]:
-            render_tiling(dualcoords, rhombi, matchings, 1, xB, y, red)
+            render_tiling(dualcoords, rhombi, matchings, 1, xB, y, red, epsB)
         if show["B_matching"]:
-            render_matching(renderables,1, xB, y, red)
+            render_matching(renderables,1, xB, y, red, epsB)
         if show["B_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 1, xB, y, red)
+            render_boundary(dualcoords, rhombi, matchings, 1, xB, y, red, epsB)
         if show["B_centers"]:
-            boxes += render_active_hex_centers(coords, hexagons, matchings[1], 
-                xB, y, 1)
-        boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font)
-
+            boxes += render_active_hex_centers(renderables, xB, y, 1, epsB)
+        boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font, epsB)
+        renderables["epsB"] = epsB
+        
     if show["Center"]:
+        epsCenter = {"coords":[], "ps":[]}
         if show["center_background"]:
-            render_background(coords, rhombi, xCenter, y, 1)
+            render_background(coords, rhombi, xCenter, y, 1, epsCenter)
         if show["center_A_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 0, xCenter, y, black)
+            render_boundary(dualcoords, rhombi, matchings, 0, xCenter, y, black, epsCenter)
         if show["center_B_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 1, xCenter, y, red)
-
+            render_boundary(dualcoords, rhombi, matchings, 1, xCenter, y, red, epsCenter)
         if show["center_A_matching"] and not show["center_B_matching"]:
-            boxes += render_matching(renderables,0, xCenter, y, black)
+            boxes += render_matching(renderables,0, xCenter, y, black, epsCenter)
         if show["center_B_matching"] and not show["center_A_matching"]:
-            boxes += render_matching(renderables,1, xCenter, y, red)
+            boxes += render_matching(renderables,1, xCenter, y, red, epsCenter)
         if show["center_A_matching"] and show["center_B_matching"]:
-            boxes += render_xor_edges(renderables, xCenter, y, [black, red])
+            boxes += render_xor_edges(renderables, xCenter, y, [black, red], epsCenter)
             if show["center_doubled_edges"]: 
-                render_doubled_edges(renderables, xCenter, y, [black, red])
-        boxes += render_center_buttons(10+xCenter, 10, renderables, font)
+                render_doubled_edges(renderables, xCenter, y, [black, red], epsCenter)
+        boxes += render_center_buttons(10+xCenter, 10, renderables, font, epsCenter)
+        renderables["epsCenter"] = epsCenter
 
     y = lengths["screen_height"] - lengths["button_height"]
-    boxes += render_os_buttons(10,y,filenames,renderables,window,font)
+    
+    boxes += render_showhide_buttons(10,y, renderables, font)
+    boxes += render_global_adjusters(400, y, renderables, font)
     y -= lengths["button_height"]
-    boxes += render_showhide_buttons(10,y, renderables, window, font)
-    y -= lengths["button_height"]
-    boxes += render_global_adjusters(10, y, renderables, window, font)
+    boxes += render_os_buttons(10,y,filenames,renderables,font)
     pygame.display.flip()
     return boxes
 
@@ -563,14 +679,19 @@ def hex_neighbours(hexagon):
     return [(r-4,c), (r-2, c+6), (r+2,c+6), (r+4,c), (r+2,c-6), (r-2,c-6)]
 
 #==============================================================
-def render_active_hex_centers(coords, hexlist, matching, xoffset, yoffset, 
-            which_side):
+def render_active_hex_centers(renderables, xoffset, yoffset, 
+            which_side, eps):
+    coords=renderables["coords"] 
+    hexlist=renderables["hexagons"] 
+    matching=renderables["matchings"][which_side]
+    lengths=renderables["lengths"]
+
     adj = adjacency_map(matching)
     boxes = []
     for i in range(len(hexlist)):
         h = hexlist[i]
         if is_active(h, adj): 
-            bb = render_hexagon_center(coords, h, xoffset, yoffset)
+            bb = render_hexagon_center(coords, h, xoffset, yoffset, lengths["hex_flipper_radius"], eps)
             boxes.append(("hexagon", i, which_side, bb))
     return boxes
 
@@ -842,11 +963,14 @@ def load(basename):
     #    lengthsfile = open(basename + "lengths.pkl", "rb")
     #    lengths = pickle.load(lengthsfile)
     #    lengthsfile.close()
+    #    if "old_screen_size" in lengths:
+    #       del lengths["old_screen_size"]
     #else:
     if True:
         lengths = {
             "button_height": 20,
-            "dimer_width":4,
+            "dimer_width":3,
+            "hex_flipper_radius":4,
             "y": 45,
             }
     renderables = {"background":background, 
