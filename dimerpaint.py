@@ -14,7 +14,7 @@ from collections import defaultdict
 black    = (   0,   0,   0)
 white    = ( 255, 255, 255)
 blue     = (  50,  50, 255)
-green    = (   0, 255,   0)
+green    = (  75, 255,   0)
 dkgreen  = (   0, 100,   0)
 red      = ( 255,   0,   0)
 purple   = (0xBF,0x0F,0xB5)
@@ -187,28 +187,45 @@ def normal(coords, edge, magnitude):
     normal_length = math.sqrt(normal_x*normal_x + normal_y*normal_y)
     normal_x *= magnitude/normal_length
     normal_y *= magnitude/normal_length
-    return (int(normal_x), int(normal_y))
+    return (normal_x, normal_y)
 
 def render_double_edge(coords, edge, xoffset, yoffset, colours, width, eps):
     e = [endpt for endpt in edge]
     p0 = coords[e[0]] 
     p1 = coords[e[1]] 
 
-    norm = normal(coords, edge, width/2.0)
+    norm = normal(coords, edge, width*2/3) 
 
-    bb1 = render_edge(coords, edge, xoffset+norm[0], yoffset+norm[1], colours[0], width, eps)
-    bb2 = render_edge(coords, edge, xoffset-norm[0], yoffset-norm[1], colours[1], width, eps)
+    pts = [  (p0[0]  + norm[0], p0[1]  + norm[1]),
+             (p1[0]  + norm[0], p1[1]  + norm[1]),
+             (p0[0]  - norm[0], p0[1] - norm[1]),
+             (p1[0]  - norm[0], p1[1] - norm[1]), ]
 
-    #q0 = (p0[0] + xoffset + norm[0], p0[1] + yoffset + norm[1])
-    #q1 = (p1[0] + xoffset + norm[0], p1[1] + yoffset + norm[1])
+    eps["coords"].extend(pts) 
+    ps = "%f %f %f setrgbcolor "%(colours[0][0]/255.0,colours[0][1]/255.0,colours[0][2]/255.0) 
+    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width,pts[0][0],
+            pts[0][1],pts[1][0],pts[1][1])
+    eps["ps"].append(ps)
+    ps = "%f %f %f setrgbcolor "%(colours[1][0]/255.0,colours[1][1]/255.0,colours[1][2]/255.0) 
+    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width,pts[2][0],
+            pts[2][1],pts[3][0],pts[3][1])
+    eps["ps"].append(ps)
 
-    #bb1 = pygame.draw.line(screen, colours[0], q0, q1, width)
+    norm = normal(coords, edge, width/2) 
+    draw_these = [[pts[0],pts[1]],[pts[2],pts[3]]]
+    boxes = []
+    for i in range(2):
+        edge = draw_these[i]
+        poly = [
+            (edge[0][0] + xoffset + norm[0], edge[0][1] + yoffset + norm[1]),
+            (edge[1][0] + xoffset + norm[0], edge[1][1] + yoffset + norm[1]),
+            (edge[1][0] + xoffset - norm[0], edge[1][1] + yoffset - norm[1]),
+            (edge[0][0] + xoffset - norm[0], edge[0][1] + yoffset - norm[1]), ]
+    
+        boxes += pygame.draw.polygon(screen, colours[i], poly, 0)
 
-    #q0 = (p0[0] + xoffset - norm[0], p0[1] + yoffset - norm[1])
-    #q1 = (p1[0] + xoffset - norm[0], p1[1] + yoffset - norm[1])
-    #bb2 = pygame.draw.line(screen, colours[1], q0, q1, width)
 
-    return bb1.union(bb2)
+    return boxes
 
     
 def render_vertex(coords, v, xoffset, yoffset, colour):
@@ -223,7 +240,6 @@ def render_background(renderables, xoffset, yoffset, which_side, eps):
     for e in graph.keys():
         bb = render_line(coords, e, xoffset, yoffset, grey, 1, eps)        
         bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
-        #pygame.draw.rect(screen, green, bb, 1)  debug
         boundingboxes.append(("edge", e, which_side, bb))
     return boundingboxes    
 
@@ -415,6 +431,7 @@ def null_callback(args):
     pass
 
 def fullscreen_callback(args):
+    return;
     renderables = args["renderables"]
 
     if "old_screen_size" in renderables["lengths"]:
@@ -429,6 +446,10 @@ def fullscreen_callback(args):
             compute_picture_sizes(renderables)
 
 
+
+def clear_highlight_callback(args):
+    print "Clear all highlighting."
+    args["renderables"]["highlight"] = [{},{}]
 
 def quit_callback(args):
     print "Quit button clicked."
@@ -458,10 +479,11 @@ def eps_callback(args):
 
     xvalues = [v[0] for v in coords]
     yvalues = [v[1] for v in coords]
-    xmin = min(xvalues)
-    ymin = min(yvalues)
-    xmax = max(xvalues)
-    ymax = max(yvalues)
+    boundary = 10
+    xmin = min(xvalues) - boundary
+    ymin = min(yvalues) - boundary
+    xmax = max(xvalues) + boundary
+    ymax = max(yvalues) + boundary
 
     yc = (ymin + ymax) / 2
 
@@ -471,7 +493,10 @@ def eps_callback(args):
         "%%%%BoundingBox: %d %d %d %d" % (xmin, ymin, xmax, ymax),
         "%%%%HiResBoundingBox: %d %d %d %d" % (xmin, ymin, xmax, ymax),
         "%%EndComments",
-        "1 setlinecap", ]
+        "1 setlinecap", 
+        "0 %d translate" % yc,
+        "1 -1 scale",
+        "0 %d translate" % -yc]
 
     epsfile = open("test.eps", "w")
     for line in headerlines:
@@ -493,10 +518,11 @@ def showhide_callback(args):
 # Toggle visibility of one of the 3 displays; resize pictures.
 def showhide_picture_callback(args):
     renderables = args["renderables"]
-    picture = args["picture"]
+    pictures = args["pictures"]
     show = renderables["show"]
-    print "Toggle entire picture", picture
-    show[picture] = not show[picture]
+    print "Showing some pictures:", pictures
+    for picture in ["A", "Center", "B"]:
+        show[picture] = (picture in pictures)
     compute_picture_sizes(renderables)
     
 def render_dimer_buttons(x,y, side, renderables, font, eps):
@@ -561,10 +587,16 @@ def render_os_buttons(x, y, filenames, renderables, font):
 
 def render_showhide_buttons(x,y, renderables, font):
     buttonrow = [
-        ("A picture", showhide_picture_callback, {"picture":"A", "renderables":renderables} ),
-        ("AB picture", showhide_picture_callback,{"picture":"Center", "renderables":renderables} ),
-        ("B picture", showhide_picture_callback, {"picture":"B", "renderables":renderables} ),
-        ("Full screen", fullscreen_callback, {"renderables":renderables}),
+        ("Just A", showhide_picture_callback, {"pictures":["A"], "renderables":renderables} ),
+        ("A union B", showhide_picture_callback,{"pictures":["Center"], "renderables":renderables} ),
+        ("Just B", showhide_picture_callback, {"pictures":["B"], "renderables":renderables} ),
+        ("A beside B", showhide_picture_callback,{"pictures":["A","B"], "renderables":renderables} ),
+        ("All three", showhide_picture_callback,{"pictures":["A","Center", "B"], 
+                "renderables":renderables} ),
+        ("Clear highlight", clear_highlight_callback,{"renderables":renderables} )
+
+        #("Full screen", fullscreen_callback, {"renderables":renderables}),
+        
     ]
     return draw_button_row(x,y,5,font,buttonrow)
 
@@ -988,15 +1020,13 @@ def load(basename):
             "center_B_boundary": True,
             "center_doubled_edges": True,
         }
-# DEBUG
-    #if os.path.isfile(basename + "lengths.pkl"):
-    #    lengthsfile = open(basename + "lengths.pkl", "rb")
-    #    lengths = pickle.load(lengthsfile)
-    #    lengthsfile.close()
-    #    if "old_screen_size" in lengths:
-    #       del lengths["old_screen_size"]
-    #else:
-    if True:
+    if os.path.isfile(basename + "lengths.pkl"):
+        lengthsfile = open(basename + "lengths.pkl", "rb")
+        lengths = pickle.load(lengthsfile)
+        lengthsfile.close()
+        if "old_screen_size" in lengths:
+           del lengths["old_screen_size"]
+    else:
         lengths = {
             "button_height": 20,
             "dimer_width":3,
