@@ -671,13 +671,13 @@ def render_everything(renderables,filenames,font):
         epsCenter = {"coords":[], "ps":[]}
         if show["center_background"]:
             render_background(renderables, xCenter, y, 1, epsCenter)
-        if show["center_A_boundary"]:
-            render_boundary(renderables, 0, xCenter, y, black, epsCenter)
-        if show["center_B_boundary"]:
-            render_boundary(renderables, 1, xCenter, y, red, epsCenter)
         if show["Highlight"]:
             render_highlight(renderables,0, xCenter, y, green, epsCenter)
             render_highlight(renderables,1, xCenter, y, green, epsCenter)
+        if show["center_A_boundary"]:
+            render_boundary(renderables, 0, xCenter+3, y, black, epsCenter)
+        if show["center_B_boundary"]:
+            render_boundary(renderables, 1, xCenter-3, y, red, epsCenter)
         if show["center_A_matching"] and not show["center_B_matching"]:
             boxes += render_matching(renderables,0, xCenter, y, black, epsCenter)
         if show["center_B_matching"] and not show["center_A_matching"]:
@@ -1109,8 +1109,6 @@ def highlight_path(renderables, m0, m1, unordered_edge):
 #===================================================================
 # Main program
 
-if len(sys.argv) != 3:
-    exit("usage: dimerpaint (data directory) <input file>")
 
 pygame.init()
 pygame.font.init()
@@ -1121,12 +1119,20 @@ clock=pygame.time.Clock() # Used to manage how fast the screen updates
 
 
 
-data_directory = sys.argv[1]
-input_file = sys.argv[2]
+try:
+    data_directory = sys.argv[1]
+except IndexError:
+    data_directory = "saved"
 
-filenames = {   "data_directory":sys.argv[1],
-                "input_file":sys.argv[2],
-                "basename":sys.argv[1] + "/" + sys.argv[2] + "/" } 
+try:
+    input_file = sys.argv[2]
+except IndexError:
+    possible_start_files = os.listdir(data_directory)
+    input_file = possible_start_files[0]
+
+filenames = {   "data_directory":data_directory,
+                "input_file":input_file,
+                "basename":data_directory + "/" + input_file + "/" } 
 
 renderables = load(filenames["basename"])
 
