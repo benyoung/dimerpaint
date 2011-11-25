@@ -107,7 +107,7 @@ def render_hexagon_center(coords, h, xoffset, yoffset, radius, eps):
     y = int((coords[h[0]][1] + coords[h[3]][1])/2 + yoffset)
 
 # I'm supposed to render these in eps I guess?  Cant think why right now
-    return pygame.draw.circle(screen, green, (x,y), radius)
+    return pygame.draw.circle(screen, blue, (x,y), radius)
 
 # Draw an edge in a given color
 def render_edge(coords, edge, xoffset, yoffset, colour, width, eps):
@@ -216,7 +216,9 @@ def render_vertex(coords, v, xoffset, yoffset, colour):
     pygame.draw.circle(screen, colour, p, 2)
 
 # Draw the background.  Return bounding boxes, tagged by "A" or "B".
-def render_background(coords, graph, xoffset, yoffset, which_side, eps):
+def render_background(renderables, xoffset, yoffset, which_side, eps):
+    coords = renderables["coords"] 
+    graph = renderables["background"]
     boundingboxes = []
     for e in graph.keys():
         bb = render_line(coords, e, xoffset, yoffset, grey, 1, eps)        
@@ -240,7 +242,12 @@ def render_matching(renderables, which_side, xoffset, yoffset, color, eps):
 
 # Draw the box pile corresponding to a matching.  This is basically like
 # drawing the tiling and then shading the tiles.
-def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color, eps):
+def render_boxes(renderables, which_side, xoffset, yoffset, color, eps):
+    dualcoords = renderables["dualcoords"]
+    rhombi = renderables["rhombi"]
+    matchings = renderables["matchings"]
+    
+
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
@@ -259,19 +266,32 @@ def render_boxes(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, co
             pass
 
 # Draw the tiling corresponding to a matching.
-def render_tiling(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, color, eps):
+def render_tiling(renderables, which_side, xoffset, yoffset, color, eps):
+    dualcoords = renderables["dualcoords"]
+    rhombi = renderables["rhombi"]
+    matchings = renderables["matchings"]
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
-
             render_rhombus(dualcoords, rhomb, xoffset, yoffset, color, 2, eps)        
         except KeyError:
             pass
 
+def render_highlight(renderables, which_side, xoffset, yoffset, color, eps):
+    for e in renderables["matchings"][which_side]:
+        if e in renderables["highlight"][which_side]:
+            rhomb = renderables["rhombi"][e]
+            dualcoords = renderables["dualcoords"]
+            render_rhombus(dualcoords, rhomb, xoffset, yoffset,color, 0, eps)
+
+
 # Draw the boundary of the matched region.  There's a cheap way to do this:
 # the boundary is all the edges in the dual graph that are singly covered by
 # a tile edge.
-def render_boundary(dualcoords, rhombi, matchings, which_side, xoffset, yoffset, colour, eps):
+def render_boundary(renderables, which_side, xoffset, yoffset, colour, eps):
+    dualcoords =renderables["dualcoords"]
+    rhombi =renderables["rhombi"]
+    matchings =renderables["matchings"]
     rhomb_edges = defaultdict(int)
     for edge in matchings[which_side].keys():
         try:
@@ -580,15 +600,17 @@ def render_everything(renderables,filenames,font):
     if show["A"]:
         epsA = {"coords":[], "ps":[]}
         if show["A_background"]:
-            boxes += render_background(coords, rhombi, xA, y, 0, epsA)
+            boxes += render_background(renderables, xA, y, 0, epsA)
         if show["A_boxes"]:
-            render_boxes(dualcoords, rhombi, matchings,0,xA, y, black, epsA)
-        if show["A_tiling"]:
-            render_tiling(dualcoords, rhombi, matchings,0, xA, y, black, epsA)
+            render_boxes(renderables,0,xA, y, black, epsA)
+        if show["Highlight"]:
+            render_highlight(renderables,0, xA, y, green, epsA)
         if show["A_matching"]:
             render_matching(renderables,0, xA, y, black, epsA)
         if show["A_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 0, xA, y, black, epsA)
+            render_boundary(renderables,  0, xA, y, black, epsA)
+        if show["A_tiling"]:
+            render_tiling(renderables,0, xA, y, black, epsA)
         if show["A_centers"]:
             boxes += render_active_hex_centers(renderables, xA, y, 0,epsA)
         boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font, epsA)
@@ -597,15 +619,17 @@ def render_everything(renderables,filenames,font):
     if show["B"]:
         epsB = {"coords":[], "ps":[]}
         if show["B_background"]:
-            boxes += render_background(coords, rhombi, xB, y, 1, epsB)
+            boxes += render_background(renderables, xB, y, 1, epsB)
         if show["B_boxes"]:
-            render_boxes(dualcoords, rhombi, matchings,1,xB, y, red, epsB)
-        if show["B_tiling"]:
-            render_tiling(dualcoords, rhombi, matchings, 1, xB, y, red, epsB)
+            render_boxes(renderables,1,xB, y, red, epsB)
+        if show["Highlight"]:
+            render_highlight(renderables,1, xB, y, green, epsB)
         if show["B_matching"]:
             render_matching(renderables,1, xB, y, red, epsB)
         if show["B_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 1, xB, y, red, epsB)
+            render_boundary(renderables, 1, xB, y, red, epsB)
+        if show["B_tiling"]:
+            render_tiling(renderables, 1, xB, y, red, epsB)
         if show["B_centers"]:
             boxes += render_active_hex_centers(renderables, xB, y, 1, epsB)
         boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font, epsB)
@@ -614,11 +638,14 @@ def render_everything(renderables,filenames,font):
     if show["Center"]:
         epsCenter = {"coords":[], "ps":[]}
         if show["center_background"]:
-            render_background(coords, rhombi, xCenter, y, 1, epsCenter)
+            render_background(renderables, xCenter, y, 1, epsCenter)
         if show["center_A_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 0, xCenter, y, black, epsCenter)
+            render_boundary(renderables, 0, xCenter, y, black, epsCenter)
         if show["center_B_boundary"]:
-            render_boundary(dualcoords, rhombi, matchings, 1, xCenter, y, red, epsCenter)
+            render_boundary(renderables, 1, xCenter, y, red, epsCenter)
+        if show["Highlight"]:
+            render_highlight(renderables,0, xCenter, y, green, epsCenter)
+            render_highlight(renderables,1, xCenter, y, green, epsCenter)
         if show["center_A_matching"] and not show["center_B_matching"]:
             boxes += render_matching(renderables,0, xCenter, y, black, epsCenter)
         if show["center_B_matching"] and not show["center_A_matching"]:
@@ -938,6 +965,7 @@ def load(basename):
             "A": True,
             "B": True,
             "Center": True,
+            "Highlight": True,
 
             "A_background": True,
             "A_matching": True,
@@ -975,7 +1003,8 @@ def load(basename):
             "hex_flipper_radius":4,
             "y": 45,
             }
-    renderables = {"background":background, 
+    renderables = {"highlight":[{},{}], # highlighted edges on left and right
+                   "background":background, 
                    "matchings":matchings, 
                    "hexagons":hexagons, 
                    "rhombi": rhombi,
@@ -988,6 +1017,64 @@ def load(basename):
     compute_picture_sizes(renderables)
     return renderables
 
+#===================================================================
+# Highlighting code
+def highlight_edge(renderables, edge, side):
+    highlight = renderables["highlight"]
+    if edge in highlight[side]:
+        print "edge highlight off: side ", side, edge
+        del highlight[side][edge]
+    else:
+        print "edge highlight on: side ", side, edge
+        highlight[side][edge] = 1
+
+def highlight_hexagon(renderables, hexagon, side):
+    highlight = renderables["highlight"]
+    edges = []
+    for i in range(6):
+        j = (i+1) % 6
+        edges.append(frozenset([hexagon[i], hexagon[j]]))
+    all_highlighted = True
+
+    for edge in edges:
+        if not(edge in highlight[side]):
+            all_highlighted = False
+
+    if(all_highlighted):
+        for edge in edges:
+            del highlight[side][edge]
+    else:
+        for edge in edges:
+            highlight[side][edge] = 1 
+
+def highlight_path(renderables, m0, m1, unordered_edge):
+    matchings = renderables["matchings"]
+    edge = [endpoint for endpoint in unordered_edge]
+    adj0 = adjacency_map(matchings[m0])
+    adj1 = adjacency_map(matchings[m1])
+    path = find_path(adj0, adj1, edge[0])
+
+    #list of edges corresponding to the path
+    loop = []
+    all_highlighted = True
+
+    for i in range(len(path) - 1):
+        e = frozenset([path[i], path[i+1]])
+        loop.append(e)
+        if e not in renderables["highlight"][m0]: 
+            all_highlighted = False
+        if e not in renderables["highlight"][m1]:
+            all_highlighted = False
+
+    if all_highlighted:
+        for e in loop:
+            del renderables["highlight"][m0][e]
+            del renderables["highlight"][m1][e]
+    else:
+        for e in loop:
+            renderables["highlight"][m0][e] = 1
+            renderables["highlight"][m1][e] = 1
+ 
 
 #===================================================================
 # Main program
@@ -1033,28 +1120,37 @@ while done==False:
             radius = 1
             ul = (event.pos[0] - radius, event.pos[1] - radius)
             clickpoint = pygame.Rect(ul , (2*radius,2*radius))
-            index = clickpoint.collidelist(bounding_boxes)
-            if(index != -1):
-                objtype = bounding_box_data[index][0]
+            box_index = clickpoint.collidelist(bounding_boxes)
+            if(box_index != -1):
+                objtype = bounding_box_data[box_index][0]
                 matchings = renderables["matchings"]
                 hexagons = renderables["hexagons"]
                 if objtype == "edge":
-                    (objtype, index, side, box) = bounding_box_data[index]
-                    if index in matchings[side]:
-                        print "deleting"
-                        del matchings[side][index]
+                    (objtype, edge, side, box) = bounding_box_data[box_index]
+                    if edge in matchings[side]:
+                        if(event.button == 3):
+                            highlight_edge(renderables, edge, side)
+                        else:
+                            print "deleting"
+                            del matchings[side][edge]
                     else:
                         print "adding"
-                        matchings[side][index] = 1
+                        matchings[side][edge] = 1
                 elif objtype == "matchededge":
-                    (objtype, index, side, box) = bounding_box_data[index]
-                    flip_path(matchings, side, 1-side, index)
+                    (objtype, matchededge, side, box) = bounding_box_data[box_index]
+                    if event.button == 3:
+                        highlight_path(renderables, side, 1-side, matchededge)
+                    else:
+                        flip_path(matchings, side, 1-side, matchededge)
                 elif objtype == "button":
-                    (objtype, args, callback, bb) = bounding_box_data[index]
+                    (objtype, args, callback, bb) = bounding_box_data[box_index]
                     callback(args)
                 elif objtype == "hexagon":
-                    (objtype, index, side, box) = bounding_box_data[index]
-                    flip_hex(matchings[side], hexagons, index)
+                    (objtype, hexagon, side, box) = bounding_box_data[box_index]
+                    if event.button == 3:
+                        highlight_hexagon(renderables, hexagons[hexagon], side)
+                    else:
+                        flip_hex(matchings[side], hexagons, hexagon)
                 else:
                     print "uh why am I here?"
 
