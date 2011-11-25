@@ -235,7 +235,9 @@ def render_vertex(coords, v, xoffset, yoffset, colour):
 # Draw the background.  Return bounding boxes, tagged by "A" or "B".
 def render_background(renderables, xoffset, yoffset, which_side, eps):
     coords = renderables["coords"] 
-    graph = renderables["background"]
+    # Turns out that it's nicer to render edges where all the rhombi are.
+    #graph = renderables["background"]  
+    graph = renderables["rhombi"]
     boundingboxes = []
     for e in graph.keys():
         bb = render_line(coords, e, xoffset, yoffset, grey, 1, eps)        
@@ -603,7 +605,8 @@ def render_showhide_buttons(x,y, renderables, font):
 def render_global_adjusters(x,y, renderables, font):
     adjusterlist = [
         ("Dimer width", "dimer_width", 1),
-        ("Center radius", "hex_flipper_radius", 1)
+        ("Center radius", "hex_flipper_radius", 1),
+        ("Overlay offset", "overlay_offset", 1),
     ]
     return draw_adjuster_row(x,y,5,renderables["lengths"],font,  adjusterlist)
 
@@ -675,9 +678,9 @@ def render_everything(renderables,filenames,font):
             render_highlight(renderables,0, xCenter, y, green, epsCenter)
             render_highlight(renderables,1, xCenter, y, green, epsCenter)
         if show["center_A_boundary"]:
-            render_boundary(renderables, 0, xCenter+3, y, black, epsCenter)
+            render_boundary(renderables, 0, xCenter+lengths["overlay_offset"], y, black, epsCenter)
         if show["center_B_boundary"]:
-            render_boundary(renderables, 1, xCenter-3, y, red, epsCenter)
+            render_boundary(renderables, 1, xCenter-lengths["overlay_offset"], y, red, epsCenter)
         if show["center_A_matching"] and not show["center_B_matching"]:
             boxes += render_matching(renderables,0, xCenter, y, black, epsCenter)
         if show["center_B_matching"] and not show["center_A_matching"]:
@@ -1031,6 +1034,7 @@ def load(basename):
             "button_height": 20,
             "dimer_width":3,
             "hex_flipper_radius":4,
+            "overlay_offset":0,
             "y": 45,
             }
     renderables = {"highlight":[{},{}], # highlighted edges on left and right
