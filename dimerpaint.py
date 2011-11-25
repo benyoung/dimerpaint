@@ -459,7 +459,9 @@ def eps_callback(args):
     for line in ps:
         epsfile.write(line + "\n")
     epsfile.write("showpage\n")
-    epsfile.close
+    epsfile.close()
+    if(os.fork() == 0): # fork a child process
+        os.execl('./showps', '')
 
 # Toggle visibility of a layer
 def showhide_callback(args):

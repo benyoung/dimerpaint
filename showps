@@ -1,0 +1,4 @@
+#!/bin/sh
+# Quick kludge so that I don't have to pass arguments to evince, don't know
+# why that isn't working programatticaly
+/usr/bin/evince test.eps
