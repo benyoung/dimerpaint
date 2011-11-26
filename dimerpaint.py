@@ -288,10 +288,15 @@ def render_tiling(renderables, which_side, xoffset, yoffset, color, eps):
     dualcoords = renderables["dualcoords"]
     rhombi = renderables["rhombi"]
     matchings = renderables["matchings"]
+    try:
+        width = renderables["lengths"]["tile_edge_width"]
+    except KeyError:
+        width = 2
+        renderables["lengths"]["tile_edge_width"] = width
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
-            render_rhombus(dualcoords, rhomb, xoffset, yoffset, color, 2, eps)        
+            render_rhombus(dualcoords, rhomb, xoffset, yoffset, color, width, eps)        
         except KeyError:
             pass
 
@@ -311,6 +316,12 @@ def render_boundary(renderables, which_side, xoffset, yoffset, colour, eps):
     rhombi =renderables["rhombi"]
     matchings =renderables["matchings"]
     rhomb_edges = defaultdict(int)
+    try:
+        width = renderables["lengths"]["tile_edge_width"]
+    except KeyError:
+        width = 2
+        renderables["lengths"]["tile_edge_width"] = width
+
     for edge in matchings[which_side].keys():
         try:
             rhomb = rhombi[edge]
@@ -322,7 +333,7 @@ def render_boundary(renderables, which_side, xoffset, yoffset, colour, eps):
             pass
     for edge in rhomb_edges.keys():
         if rhomb_edges[edge] == 1:
-            render_line(dualcoords, edge, xoffset, yoffset, colour, 2, eps)
+            render_line(dualcoords, edge, xoffset, yoffset, colour, width, eps)
 
 # Draw doubled edges in a pair of matchings.
 def render_doubled_edges(renderables, xoffset, yoffset, colors, eps):
@@ -607,6 +618,7 @@ def render_global_adjusters(x,y, renderables, font):
         ("Dimer width", "dimer_width", 1),
         ("Center radius", "hex_flipper_radius", 1),
         ("Overlay offset", "overlay_offset", 1),
+        ("Tile edge", "tile_edge_width", 1)
     ]
     return draw_adjuster_row(x,y,5,renderables["lengths"],font,  adjusterlist)
 
@@ -1035,6 +1047,7 @@ def load(basename):
             "dimer_width":3,
             "hex_flipper_radius":4,
             "overlay_offset":0,
+            "tile_edge_width":2,
             "y": 45,
             }
     renderables = {"highlight":[{},{}], # highlighted edges on left and right
