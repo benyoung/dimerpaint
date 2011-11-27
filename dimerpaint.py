@@ -489,6 +489,7 @@ def eps_callback(args):
     print "Print to EPS button clicked"
     coords = args["eps"]["coords"]
     ps = args["eps"]["ps"]
+    filename = args["eps"]["filename"]
 
     xvalues = [v[0] for v in coords]
     yvalues = [v[1] for v in coords]
@@ -511,15 +512,15 @@ def eps_callback(args):
         "1 -1 scale",
         "0 %d translate" % -yc]
 
-    epsfile = open("test.eps", "w")
+    epsfile = open(filename, "w")
     for line in headerlines:
         epsfile.write(line + "\n")
     for line in ps:
         epsfile.write(line + "\n")
     epsfile.write("showpage\n")
     epsfile.close()
-    if(os.fork() == 0): # fork a child process
-        os.execl('./showps', '')
+    #if(os.fork() == 0): # fork a child process
+    #    os.execl('./showps', '')
 
 # Toggle visibility of a layer
 def showhide_callback(args):
@@ -544,6 +545,7 @@ def render_dimer_buttons(x,y, side, renderables, font, eps):
     hexagons = renderables["hexagons"]
     show = renderables["show"]
     args = {"side":side, "matching":matchings[side], "hexagons":hexagons}
+    filename = eps["filename"]
     if(side==0):
         prefix = "A_"
     else:
@@ -624,7 +626,7 @@ def render_global_adjusters(x,y, renderables, font):
 
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
-def render_everything(renderables,filenames,font):
+def render_everything(renderables,filenames,current_file, font):
     background = renderables["background"] 
     matchings = renderables["matchings"] 
     hexagons = renderables["hexagons"]
@@ -645,7 +647,7 @@ def render_everything(renderables,filenames,font):
     boxes = []
 
     if show["A"]:
-        epsA = {"coords":[], "ps":[]}
+        epsA = {"coords":[], "ps":[], "filename":current_file + "_A.eps"}
         if show["A_background"]:
             boxes += render_background(renderables, xA, y, 0, epsA)
         if show["A_boxes"]:
@@ -664,7 +666,7 @@ def render_everything(renderables,filenames,font):
         renderables["epsA"] = epsA
 
     if show["B"]:
-        epsB = {"coords":[], "ps":[]}
+        epsB = {"coords":[], "ps":[], "filename": current_file + "_B.eps"}
         if show["B_background"]:
             boxes += render_background(renderables, xB, y, 1, epsB)
         if show["B_boxes"]:
@@ -683,7 +685,7 @@ def render_everything(renderables,filenames,font):
         renderables["epsB"] = epsB
         
     if show["Center"]:
-        epsCenter = {"coords":[], "ps":[]}
+        epsCenter = {"coords":[], "ps":[], "filename":current_file + "_AB.eps"}
         if show["center_background"]:
             render_background(renderables, xCenter, y, 1, epsCenter)
         if show["Highlight"]:
@@ -1153,7 +1155,7 @@ filenames = {   "data_directory":data_directory,
 
 renderables = load(filenames["basename"])
 
-bounding_box_data = render_everything(renderables,filenames,font)
+bounding_box_data = render_everything(renderables,filenames,input_file,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
 
 
@@ -1167,7 +1169,7 @@ while done==False:
             print "user resized screen"
             screen=pygame.display.set_mode(event.size, pygame.RESIZABLE)
             compute_picture_sizes(renderables)
-            bounding_box_data = render_everything(renderables, filenames,font)
+            bounding_box_data = render_everything(renderables, filenames,input_file,font)
             bounding_boxes = [record[3] for record in bounding_box_data]
         if event.type == pygame.MOUSEBUTTONUP:
             radius = 1
@@ -1207,7 +1209,7 @@ while done==False:
                 else:
                     print "uh why am I here?"
 
-                bounding_box_data = render_everything(renderables, filenames,font)
+                bounding_box_data = render_everything(renderables, filenames,input_file, font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
 
     # Limit to 20 frames per second
