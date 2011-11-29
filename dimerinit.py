@@ -1,5 +1,7 @@
 #!/usr/bin/python
+import os
 import sys
+import shutil
 import argparse
 
 parser = argparse.ArgumentParser(description="Make input files for mklattice / dimerpaint")
@@ -8,7 +10,7 @@ if len(sys.argv) != 5:
     sys.exit("usage: dimerinit.py [dryrun|filename] a b c")
 
 [a,b,c] = (int(u) for u in sys.argv[2:5])
-
+basename = sys.argv[1]
 
 print "Generating %d x %d x %d" % (a,b,c)
 
@@ -77,25 +79,72 @@ def hexagon_centers(grid, size):
 # Put an a by b by c dimer box upper-left justified in the grid
 def box(grid, a,b,c):
 
-    row = 4*c - 2*(b%2) + 2 # trial and error for this, to be honest
+    row = 4*c + 2*(b%2)+ 2 # trial and error for this, to be honest
     col = 6*b + 4
 
-    rewrite(grid, (row,col), "*") # debug
     rewrite_lattice(grid, (row+2,col-1), (2,6),  (2,-6),  (a,b), "---")
     rewrite_lattice(grid, (row-1,col-3), (2,-6), (-4,0),  (b,c), "/")
     rewrite_lattice(grid, (row-1,col+3), (-4,0), (2,6),   (c,a), "\\")
 
 
 gridrows = int((2*a + 2*b + 4*c) / 4) + 1  + (a%2)
+if(a%2 == 0) and (b%2 == 1):
+    gridrows += 1
 gridcols = int((6*a + 6*b) / 12) + 1 + (a + b)%2
 
-grid = hexgrid(gridrows ,gridcols, noedge_grid, noedge_joiner)
+if(basename == "dryrun"):
+    grid = hexgrid(gridrows ,gridcols, noedge_grid, noedge_joiner)
+    box(grid, a,b,c)
+    print "\n".join(grid)
+else:
+    os.mkdir(basename)
+    os.chdir(basename)
+
+    mkl_file = open("full.mkl", "w")
+    grid = hexgrid(gridrows, gridcols, hexagon_grid, hexagon_joiner)
+    hexagon_centers(grid, (gridrows, gridcols))
+    mkl_file.write("\n".join(grid))
+    mkl_file.write("\n\nMASK\n")
+    grid = hexgrid(gridrows, gridcols, hexagon_grid, hexagon_joiner)
+    mkl_file.write("\n".join(grid))
+    mkl_file.write("\n\nPARAMETERS\n")
+    mkl_file.write("raw_text_output_only => 1,\n")
+    mkl_file.write("first_vertex => 'V(0)(2)',\n")
+    mkl_file.write("find_hexagons => 1,\n")
+    mkl_file.write("\n\nLABELS\n")
+    mkl_file.close()
+    
+    mkl_file = open("A.mkl", "w")
+    grid = hexgrid(gridrows, gridcols, hexagon_grid, hexagon_joiner)
+    hexagon_centers(grid, (gridrows, gridcols))
+    mkl_file.write("\n".join(grid))
+    mkl_file.write("\n\nMASK\n")
+    grid = hexgrid(gridrows, gridcols, noedge_grid, noedge_joiner)
+    box(grid, a,b,c)
+    mkl_file.write("\n".join(grid))
+    mkl_file.write("\n\nPARAMETERS\n")
+    mkl_file.write("raw_text_output_only => 1,\n")
+    mkl_file.write("first_vertex => 'V(0)(2)',\n")
+    mkl_file.write("find_hexagons => 1,\n")
+    mkl_file.write("\n\nLABELS\n")
+    mkl_file.close()
+    shutil.copy("A.mkl", "B.mkl")    
+    
+    makeit_lines = [
+        "#!/bin/sh",
+        "mklattice full.mkl",
+        "mklattice A.mkl",
+        "mklattice B.mkl",
+    ]
+    makeit = open("makeit", "w")
+    makeit.write("\n".join(makeit_lines))
+    makeit.close()
+    os.chmod("makeit", 0700)
+    os.execl("makeit", "I guess I need to pass in some arguments")
+
+
 #grid = hexgrid(a,b, hexagon_grid, hexagon_joiner)
 #hexagon_centers(grid, (a, b))
-
-box(grid, a,b,c)
-
-print "\n".join(grid)
 
 
 
