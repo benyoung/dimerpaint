@@ -5,7 +5,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Make input files for mklattice / dimerpaint")
 
 if len(sys.argv) != 5:
-    sys.exit("usage: dimerinit.py [test|gen] a b c")
+    sys.exit("usage: dimerinit.py [dryrun|filename] a b c")
 
 [a,b,c] = (int(u) for u in sys.argv[2:5])
 
