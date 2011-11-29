@@ -1141,7 +1141,7 @@ clock=pygame.time.Clock() # Used to manage how fast the screen updates
 try:
     data_directory = sys.argv[1]
 except IndexError:
-    data_directory = "saved"
+    data_directory = "dimerpaint"
 
 try:
     input_file = sys.argv[2]
