@@ -264,7 +264,10 @@ def render_boxes(renderables, which_side, xoffset, yoffset, color, eps):
     dualcoords = renderables["dualcoords"]
     rhombi = renderables["rhombi"]
     matchings = renderables["matchings"]
-    
+    try:
+        global_intensity = renderables["lengths"]["shading_intensity"]
+    except KeyError:
+        global_intensity = 1
 
     for edge in matchings[which_side].keys():
         try:
@@ -276,8 +279,10 @@ def render_boxes(renderables, which_side, xoffset, yoffset, color, eps):
             intensity = {-1: 0.65, 0:0.9, 1:0.75}[inverseslope]
             fillcolor_components = [0,0,0]
             for i in range(3):
-                fillcolor_components[i] = 255 * (intensity)  + color[i] * (1-intensity)
-
+                fillcolor_components[i] = 255 * intensity  + color[i] * (1-intensity)
+                fillcolor_components[i] = 255 * (1-global_intensity) + fillcolor_components[i] * global_intensity 
+                if fillcolor_components[i] < 0:
+                    fillcolor_components[i] = 0
             fillcolor = tuple(fillcolor_components)
             render_rhombus(dualcoords, rhomb, xoffset, yoffset, fillcolor, 0, eps)        
         except KeyError:
@@ -439,6 +444,7 @@ def adjust_callback(args):
     lengths[quantity] += amount
     if(lengths[quantity] < 0):
         lengths[quantity] = 0
+    print "%s set to %f" % (quantity, lengths[quantity])
 
 def null_callback(args):
     pass
@@ -620,7 +626,8 @@ def render_global_adjusters(x,y, renderables, font):
         ("Dimer width", "dimer_width", 1),
         ("Center radius", "hex_flipper_radius", 1),
         ("Overlay offset", "overlay_offset", 1),
-        ("Tile edge", "tile_edge_width", 1)
+        ("Tile edge", "tile_edge_width", 1),
+        ("Shading intensity", "shading_intensity", 0.1),
     ]
     return draw_adjuster_row(x,y,5,renderables["lengths"],font,  adjusterlist)
 
@@ -664,6 +671,8 @@ def render_everything(renderables,filenames,current_file, font):
             boxes += render_active_hex_centers(renderables, xA, y, 0,epsA)
         boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font, epsA)
         renderables["epsA"] = epsA
+        if eps_only: # hack to render eps programattically
+            eps_callback({"eps":epsA})
 
     if show["B"]:
         epsB = {"coords":[], "ps":[], "filename": current_file + "_B.eps"}
@@ -683,6 +692,8 @@ def render_everything(renderables,filenames,current_file, font):
             boxes += render_active_hex_centers(renderables, xB, y, 1, epsB)
         boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font, epsB)
         renderables["epsB"] = epsB
+        if eps_only: # hack to render eps programattically
+            eps_callback({"eps":epsB})
         
     if show["Center"]:
         epsCenter = {"coords":[], "ps":[], "filename":current_file + "_AB.eps"}
@@ -705,6 +716,8 @@ def render_everything(renderables,filenames,current_file, font):
                 render_doubled_edges(renderables, xCenter, y, [black, red], epsCenter)
         boxes += render_center_buttons(10+xCenter, 10, renderables, font, epsCenter)
         renderables["epsCenter"] = epsCenter
+        if eps_only: # hack to render eps programattically
+            eps_callback({"eps":epsCenter})
 
     y = lengths["screen_height"] - lengths["button_height"]
     
@@ -712,6 +725,15 @@ def render_everything(renderables,filenames,current_file, font):
     boxes += render_global_adjusters(400, y, renderables, font)
     y -= lengths["button_height"]
     boxes += render_os_buttons(10,y,filenames,renderables,font)
+
+    if eps_only:
+        bigfont = pygame.font.Font(None, 72)
+        text = bigfont.render("Creating eps... please wait", True, black, grey)    
+        bb = text.get_rect()
+        bb.center = (lengths["screen_width"]/2, lengths["screen_height"]/2)
+        screen.blit(text, bb)
+
+
     pygame.display.flip()
     return boxes
 
@@ -957,6 +979,7 @@ def compute_picture_sizes(renderables):
     if show["Center"]: picturecount += 1
 
     screensize = screen.get_size()
+
     height = screensize[1] - 4*lengths["button_height"]
     width = screensize[0]
 
@@ -1044,14 +1067,22 @@ def load(basename):
         if "old_screen_size" in lengths:
            del lengths["old_screen_size"]
     else:
-        lengths = {
-            "button_height": 20,
-            "dimer_width":3,
-            "hex_flipper_radius":4,
-            "overlay_offset":0,
-            "tile_edge_width":2,
-            "y": 45,
-            }
+        lengths = {}
+
+    default_lengths = {
+        "button_height": 20,
+        "dimer_width":3,
+        "hex_flipper_radius":4,
+        "overlay_offset":0,
+        "tile_edge_width":2,
+        "shading_intensity":1,
+        "y": 45,
+        }
+
+    for param in default_lengths.keys():
+        if param not in lengths:
+            lengths[param] = default_lengths[param]
+
     renderables = {"highlight":[{},{}], # highlighted edges on left and right
                    "background":background, 
                    "matchings":matchings, 
@@ -1132,9 +1163,7 @@ def highlight_path(renderables, m0, m1, unordered_edge):
 pygame.init()
 pygame.font.init()
 font = pygame.font.Font(None, 18)
-screen=pygame.display.set_mode([1350,600], pygame.RESIZABLE)
-done=False #Loop until the user clicks the close button.
-clock=pygame.time.Clock() # Used to manage how fast the screen updates
+screen=pygame.display.set_mode((1364,690), pygame.RESIZABLE)
 
 
 
@@ -1149,6 +1178,14 @@ except IndexError:
     possible_start_files = os.listdir(data_directory)
     input_file = possible_start_files[0]
 
+eps_only = False
+try:
+    switch = sys.argv[3]
+    if switch == "eps":
+        eps_only = True
+except IndexError:
+    pass
+
 filenames = {   "data_directory":data_directory,
                 "input_file":input_file,
                 "basename":data_directory + "/" + input_file + "/" } 
@@ -1158,6 +1195,14 @@ renderables = load(filenames["basename"])
 bounding_box_data = render_everything(renderables,filenames,input_file,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
 
+done=False     #Loop until the user clicks the close button....
+if eps_only:   # unless we're just rendering the eps files, which has already been done.
+    done=True
+
+clock=pygame.time.Clock() # Used to manage how fast the screen updates
+
+
+
 
 #=================================================
 # Pygame event loop
@@ -1166,7 +1211,7 @@ while done==False:
         if event.type == pygame.QUIT: # If user clicked close
             done=True # Flag that we are done so we exit this loop
         if event.type == pygame.VIDEORESIZE:
-            print "user resized screen"
+            print "user resized screen ", event.size
             screen=pygame.display.set_mode(event.size, pygame.RESIZABLE)
             compute_picture_sizes(renderables)
             bounding_box_data = render_everything(renderables, filenames,input_file,font)
@@ -1218,6 +1263,7 @@ while done==False:
 pygame.font.quit()
 pygame.quit()
 
-save(filenames["basename"], renderables)
+if not eps_only:
+    save(filenames["basename"], renderables)
 
 
