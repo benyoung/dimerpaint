@@ -306,11 +306,11 @@ def render_tiling(renderables, which_side, xoffset, yoffset, color, eps):
             pass
 
 def render_highlight(renderables, which_side, xoffset, yoffset, color, eps):
-    for e in renderables["matchings"][which_side]:
-        if e in renderables["highlight"][which_side]:
-            rhomb = renderables["rhombi"][e]
-            dualcoords = renderables["dualcoords"]
-            render_rhombus(dualcoords, rhomb, xoffset, yoffset,color, 0, eps)
+    #for e in renderables["matchings"][which_side]:
+    for e in renderables["highlight"][which_side]:
+        rhomb = renderables["rhombi"][e]
+        dualcoords = renderables["dualcoords"]
+        render_rhombus(dualcoords, rhomb, xoffset, yoffset,color, 0, eps)
 
 
 # Draw the boundary of the matched region.  There's a cheap way to do this:
@@ -435,7 +435,7 @@ def minimize_callback(args):
 
 def randomize_callback(args):
     print "Clicked randomize button on side", args["side"]
-    randomize(args["matching"], args["hexagons"])
+    randomize(args["matching"], args["hexagons"], args["steps"])
 
 def adjust_callback(args):
     lengths = args["lengths"]
@@ -567,6 +567,7 @@ def render_dimer_buttons(x,y, side, renderables, font, eps):
         ]
 
     buttons =  draw_button_row(x, y, 5, font, buttonrow1)
+    args["steps"]=renderables["lengths"]["randomize_steps"]
     buttonrow2 = [
         ("Randomize", randomize_callback, args),
         ("Minimize", minimize_callback, args),
@@ -628,6 +629,7 @@ def render_global_adjusters(x,y, renderables, font):
         ("Overlay offset", "overlay_offset", 1),
         ("Tile edge", "tile_edge_width", 1),
         ("Shading intensity", "shading_intensity", 0.1),
+        ("Randomize steps", "randomize_steps", 100)
     ]
     return draw_adjuster_row(x,y,5,renderables["lengths"],font,  adjusterlist)
 
@@ -875,8 +877,8 @@ def flip_hex(matching, hexagons, index):
 
 #====================================================================
 # Run the glauber dynamics to randomize one picture
-def randomize(matching, hexlist):
-    for trial in range(500):
+def randomize(matching, hexlist, steps):
+    for trial in range(steps):
         # Choose a random index i
         adj = adjacency_map(matching)
         activelist = []
@@ -1076,6 +1078,7 @@ def load(basename):
         "overlay_offset":0,
         "tile_edge_width":2,
         "shading_intensity":1,
+        "randomize_steps":500,
         "y": 45,
         }
 
@@ -1227,15 +1230,15 @@ while done==False:
                 hexagons = renderables["hexagons"]
                 if objtype == "edge":
                     (objtype, edge, side, box) = bounding_box_data[box_index]
-                    if edge in matchings[side]:
-                        if(event.button == 3):
-                            highlight_edge(renderables, edge, side)
-                        else:
+                    if(event.button == 3):
+                        highlight_edge(renderables, edge, side)
+                    else:
+                        if edge in matchings[side]:
                             print "deleting"
                             del matchings[side][edge]
-                    else:
-                        print "adding"
-                        matchings[side][edge] = 1
+                        else:
+                            print "adding"
+                            matchings[side][edge] = 1
                 elif objtype == "matchededge":
                     (objtype, matchededge, side, box) = bounding_box_data[box_index]
                     if event.button == 3:
