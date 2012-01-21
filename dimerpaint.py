@@ -241,7 +241,7 @@ def render_background(renderables, xoffset, yoffset, which_side, eps):
     boundingboxes = []
     for e in graph.keys():
         bb = render_line(coords, e, xoffset, yoffset, grey, 1, eps)        
-        bb.inflate_ip(2,2) # make it a little bigger for ease of clicking
+        bb.inflate_ip(4,4) # make it a little bigger for ease of clicking
         boundingboxes.append(("edge", e, which_side, bb))
     return boundingboxes    
 
@@ -596,7 +596,7 @@ def render_center_buttons(x,y,renderables, font, eps):
 def render_os_buttons(x, y, filenames, renderables, font):
     buttons = []
     datadir = filenames["data_directory"]
-    files = os.listdir(datadir)
+    files = sorted(os.listdir(datadir))
     buttonrow = [
         ("Quit", quit_callback, {}),
     ]
