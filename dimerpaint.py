@@ -20,7 +20,15 @@ red      = ( 255,   0,   0)
 purple   = (0xBF,0x0F,0xB5)
 brown    = (0x55,0x33,0x00)
 grey     = (0x7f,0x7f,0x7f) 
- 
+
+# This is a quick hack to make it possible to use poor-quality projectors.
+# Edit these lines to alter the colors used.
+
+hi_color = green
+A_color = black
+B_color = red
+center_color = blue
+
 # read in a list of vertices in format (row, column, x, y).  (row, column) just
 # functions as a key.  Store in a dictionary keyed by the above tuple.
 def read_vertices(filename):
@@ -107,7 +115,7 @@ def render_hexagon_center(coords, h, xoffset, yoffset, radius, eps):
     y = int((coords[h[0]][1] + coords[h[3]][1])/2 + yoffset)
 
 # I'm supposed to render these in eps I guess?  Cant think why right now
-    return pygame.draw.circle(screen, blue, (x,y), radius)
+    return pygame.draw.circle(screen, center_color, (x,y), radius)
 
 # Draw an edge in a given color
 def render_edge(coords, edge, xoffset, yoffset, colour, width, eps):
@@ -660,15 +668,15 @@ def render_everything(renderables,filenames,current_file, font):
         if show["A_background"]:
             boxes += render_background(renderables, xA, y, 0, epsA)
         if show["A_boxes"]:
-            render_boxes(renderables,0,xA, y, black, epsA)
+            render_boxes(renderables,0,xA, y, A_color, epsA)
         if show["Highlight"]:
-            render_highlight(renderables,0, xA, y, green, epsA)
+            render_highlight(renderables,0, xA, y, hi_color, epsA)
         if show["A_matching"]:
-            render_matching(renderables,0, xA, y, black, epsA)
+            render_matching(renderables,0, xA, y, A_color, epsA)
         if show["A_boundary"]:
-            render_boundary(renderables,  0, xA, y, black, epsA)
+            render_boundary(renderables,  0, xA, y, A_color, epsA)
         if show["A_tiling"]:
-            render_tiling(renderables,0, xA, y, black, epsA)
+            render_tiling(renderables,0, xA, y, A_color, epsA)
         if show["A_centers"]:
             boxes += render_active_hex_centers(renderables, xA, y, 0,epsA)
         boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font, epsA)
@@ -681,15 +689,15 @@ def render_everything(renderables,filenames,current_file, font):
         if show["B_background"]:
             boxes += render_background(renderables, xB, y, 1, epsB)
         if show["B_boxes"]:
-            render_boxes(renderables,1,xB, y, red, epsB)
+            render_boxes(renderables,1,xB, y, B_color, epsB)
         if show["Highlight"]:
-            render_highlight(renderables,1, xB, y, green, epsB)
+            render_highlight(renderables,1, xB, y, hi_color, epsB)
         if show["B_matching"]:
-            render_matching(renderables,1, xB, y, red, epsB)
+            render_matching(renderables,1, xB, y, B_color, epsB)
         if show["B_boundary"]:
-            render_boundary(renderables, 1, xB, y, red, epsB)
+            render_boundary(renderables, 1, xB, y, B_color, epsB)
         if show["B_tiling"]:
-            render_tiling(renderables, 1, xB, y, red, epsB)
+            render_tiling(renderables, 1, xB, y, B_color, epsB)
         if show["B_centers"]:
             boxes += render_active_hex_centers(renderables, xB, y, 1, epsB)
         boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font, epsB)
@@ -702,20 +710,20 @@ def render_everything(renderables,filenames,current_file, font):
         if show["center_background"]:
             render_background(renderables, xCenter, y, 1, epsCenter)
         if show["Highlight"]:
-            render_highlight(renderables,0, xCenter, y, green, epsCenter)
-            render_highlight(renderables,1, xCenter, y, green, epsCenter)
+            render_highlight(renderables,0, xCenter, y, hi_color, epsCenter)
+            render_highlight(renderables,1, xCenter, y, hi_color, epsCenter)
         if show["center_A_boundary"]:
-            render_boundary(renderables, 0, xCenter+lengths["overlay_offset"], y, black, epsCenter)
+            render_boundary(renderables, 0, xCenter+lengths["overlay_offset"], y, A_color, epsCenter)
         if show["center_B_boundary"]:
-            render_boundary(renderables, 1, xCenter-lengths["overlay_offset"], y, red, epsCenter)
+            render_boundary(renderables, 1, xCenter-lengths["overlay_offset"], y, B_color, epsCenter)
         if show["center_A_matching"] and not show["center_B_matching"]:
-            boxes += render_matching(renderables,0, xCenter, y, black, epsCenter)
+            boxes += render_matching(renderables,0, xCenter, y, A_color, epsCenter)
         if show["center_B_matching"] and not show["center_A_matching"]:
-            boxes += render_matching(renderables,1, xCenter, y, red, epsCenter)
+            boxes += render_matching(renderables,1, xCenter, y, B_color, epsCenter)
         if show["center_A_matching"] and show["center_B_matching"]:
-            boxes += render_xor_edges(renderables, xCenter, y, [black, red], epsCenter)
+            boxes += render_xor_edges(renderables, xCenter, y, [A_color, B_color], epsCenter)
             if show["center_doubled_edges"]: 
-                render_doubled_edges(renderables, xCenter, y, [black, red], epsCenter)
+                render_doubled_edges(renderables, xCenter, y, [A_color, B_color], epsCenter)
         boxes += render_center_buttons(10+xCenter, 10, renderables, font, epsCenter)
         renderables["epsCenter"] = epsCenter
         if eps_only: # hack to render eps programattically
