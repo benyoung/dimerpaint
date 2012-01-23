@@ -1176,6 +1176,7 @@ pygame.font.init()
 font = pygame.font.Font(None, 18)
 screen=pygame.display.set_mode((1364,690), pygame.RESIZABLE)
 
+pygame.mouse.set_cursor(*pygame.cursors.broken_x)
 
 
 try:
