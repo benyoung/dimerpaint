@@ -643,7 +643,7 @@ def render_global_adjusters(x,y, renderables, font):
 
 #=============================================================
 # Draw everything.  Return a list of clickable boxes.
-def render_everything(renderables,filenames,current_file, font):
+def render_everything(renderables,filenames, font):
     background = renderables["background"] 
     matchings = renderables["matchings"] 
     hexagons = renderables["hexagons"]
@@ -652,6 +652,8 @@ def render_everything(renderables,filenames,current_file, font):
     dualcoords = renderables["dualcoords"]
     show = renderables["show"]
     lengths = renderables["lengths"]
+
+    current_file = filenames["input_file"]
      
     y = lengths["y"]
     xA =lengths["xA"]
@@ -1204,7 +1206,7 @@ filenames = {   "data_directory":data_directory,
 
 renderables = load(filenames["basename"])
 
-bounding_box_data = render_everything(renderables,filenames,input_file,font)
+bounding_box_data = render_everything(renderables,filenames,font)
 bounding_boxes = [record[3] for record in bounding_box_data]
 
 done=False     #Loop until the user clicks the close button....
@@ -1226,7 +1228,7 @@ while done==False:
             print "user resized screen ", event.size
             screen=pygame.display.set_mode(event.size, pygame.RESIZABLE)
             compute_picture_sizes(renderables)
-            bounding_box_data = render_everything(renderables, filenames,input_file,font)
+            bounding_box_data = render_everything(renderables, filenames,font)
             bounding_boxes = [record[3] for record in bounding_box_data]
         if event.type == pygame.MOUSEBUTTONUP:
             radius = 1
@@ -1266,7 +1268,7 @@ while done==False:
                 else:
                     print "uh why am I here?"
 
-                bounding_box_data = render_everything(renderables, filenames,input_file, font)
+                bounding_box_data = render_everything(renderables, filenames, font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
 
     # Limit to 20 frames per second
