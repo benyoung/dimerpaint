@@ -128,8 +128,8 @@ def render_edge(coords, edge, xoffset, yoffset, colour, width, eps):
     p3 = coords[e[0]] 
 
     eps["coords"].extend([p0, p1]) 
-    ps = "%f %f %f setrgbcolor " %(colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0) 
-    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width, p0[0], p0[1], p1[0], p1[1])
+    ps = "%.3f %.3f %.3f setrgbcolor " %(colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0) 
+    ps += "%.3f setlinewidth newpath %.3f %.3f moveto %.3f %.3f lineto stroke" % (width, p0[0], p0[1], p1[0], p1[1])
     eps["ps"].append(ps)
 
     p0 = (p0[0] + xoffset + n[0], p0[1] + yoffset + n[1])
@@ -146,8 +146,8 @@ def render_line(coords, edge, xoffset, yoffset, colour, width, eps):
     p1 = coords[e[1]] 
 
     eps["coords"].extend([p0,p1])
-    ps = "%f %f %f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
-    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width, p0[0], p0[1], p1[0], p1[1])
+    ps = "%.3f %.3f %.3f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
+    ps += "%.3f setlinewidth newpath %.3f %.3f moveto %.3f %.3f lineto stroke" % (width, p0[0], p0[1], p1[0], p1[1])
     eps["ps"].append(ps)
 
     p0 = (p0[0] + xoffset, p0[1] + yoffset)
@@ -156,6 +156,39 @@ def render_line(coords, edge, xoffset, yoffset, colour, width, eps):
 
     return pygame.draw.line(screen, colour, p0, p1, width)
 
+
+# Render a temperley-lieb element on a rhombus.
+def render_temperley_lieb(dualcoords, rhomb, xoffset, yoffset, colour, width, eps):
+    coordslist = []
+    for p in rhomb:
+        p0 = dualcoords[p] 
+        coordslist.append(p0)
+
+    midpoints = []
+    for i in range(len(coordslist)):
+        midpoints.append(((coordslist[i][0] + coordslist[i-1][0])/2,
+                         (coordslist[i][1] + coordslist[i-1][1])/2))
+        
+    #eps["coords"].extend(coordslist) 
+    #flatlist = []
+    #for p in coordslist:
+    #    flatlist.extend([p[0],p[1]])
+    #ps = "%f %f %f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
+    #ps += "newpath %d %d moveto %d %d lineto %d %d lineto %d %d lineto closepath" % tuple(flatlist)
+    #if width==0:
+    #    ps += " fill"
+    #else:
+    #    ps = ("%d setlinewidth " % width) + ps + " stroke"
+    #eps["ps"].append(ps)
+
+    shifted_midpoints = []
+    for p0 in midpoints:
+        p0 = (p0[0] + xoffset, p0[1] + yoffset)
+        shifted_midpoints.append(p0)
+
+    #pygame.draw.polygon(screen, colour, shiftedcoordslist, width)
+    pygame.draw.line(screen, colour, shifted_midpoints[0], shifted_midpoints[1], width)
+    pygame.draw.line(screen, colour, shifted_midpoints[2], shifted_midpoints[3], width)
 
 def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width, eps):
     coordslist = []
@@ -168,12 +201,12 @@ def render_rhombus(dualcoords, rhomb, xoffset, yoffset, colour, width, eps):
     flatlist = []
     for p in coordslist:
         flatlist.extend([p[0],p[1]])
-    ps = "%f %f %f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
-    ps += "newpath %d %d moveto %d %d lineto %d %d lineto %d %d lineto closepath" % tuple(flatlist)
+    ps = "%.3f %.3f %.3f setrgbcolor " % (colour[0] / 255.0, colour[1] / 255.0, colour[2] / 255.0)
+    ps += "newpath %.3f %.3f moveto %.3f %.3f lineto %.3f %.3f lineto %.3f %.3f lineto closepath" % tuple(flatlist)
     if width==0:
         ps += " fill"
     else:
-        ps = ("%d setlinewidth " % width) + ps + " stroke"
+        ps = ("%.3f setlinewidth " % width) + ps + " stroke"
     eps["ps"].append(ps)
 
     shiftedcoordslist = []
@@ -210,12 +243,12 @@ def render_double_edge(coords, edge, xoffset, yoffset, colours, width, eps):
              (p1[0]  - norm[0], p1[1] - norm[1]), ]
 
     eps["coords"].extend(pts) 
-    ps = "%f %f %f setrgbcolor "%(colours[0][0]/255.0,colours[0][1]/255.0,colours[0][2]/255.0) 
-    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width,pts[0][0],
+    ps = "%.3f %.3f %.3f setrgbcolor "%(colours[0][0]/255.0,colours[0][1]/255.0,colours[0][2]/255.0) 
+    ps += "%d setlinewidth newpath %.3f %.3f moveto %.3f %.3f lineto stroke" % (width,pts[0][0],
             pts[0][1],pts[1][0],pts[1][1])
     eps["ps"].append(ps)
-    ps = "%f %f %f setrgbcolor "%(colours[1][0]/255.0,colours[1][1]/255.0,colours[1][2]/255.0) 
-    ps += "%d setlinewidth newpath %d %d moveto %d %d lineto stroke" % (width,pts[2][0],
+    ps = "%.3f %.3f %.3f setrgbcolor "%(colours[1][0]/255.0,colours[1][1]/255.0,colours[1][2]/255.0) 
+    ps += "%.3f setlinewidth newpath %.3f %.3f moveto %.3f %.3f lineto stroke" % (width,pts[2][0],
             pts[2][1],pts[3][0],pts[3][1])
     eps["ps"].append(ps)
 
@@ -312,6 +345,27 @@ def render_tiling(renderables, which_side, xoffset, yoffset, color, eps):
             render_rhombus(dualcoords, rhomb, xoffset, yoffset, color, width, eps)        
         except KeyError:
             pass
+
+
+
+# Draw the Fully packed loop corresponding to a matching.
+def render_fpl(renderables, which_side, xoffset, yoffset, color, eps):
+    dualcoords = renderables["dualcoords"]
+    rhombi = renderables["rhombi"]
+    matchings = renderables["matchings"]
+    try:
+        width = renderables["lengths"]["tile_edge_width"]
+    except KeyError:
+        width = 2
+        renderables["lengths"]["tile_edge_width"] = width
+    for edge in matchings[which_side].keys():
+        try:
+            rhomb = rhombi[edge]
+            render_temperley_lieb(dualcoords, rhomb, xoffset, yoffset, color, width, eps)        
+        except KeyError:
+            pass
+
+
 
 def render_highlight(renderables, which_side, xoffset, yoffset, color, eps):
     #for e in renderables["matchings"][which_side]:
@@ -569,6 +623,7 @@ def render_dimer_buttons(x,y, side, renderables, font, eps):
         ("Graph", showhide_callback, {"layer":prefix+"background", "show":show}),
         ("Dimer", showhide_callback, {"layer":prefix+"matching", "show":show}),
         ("Tiling", showhide_callback, {"layer":prefix+"tiling", "show":show}),
+        ("FPL", showhide_callback, {"layer":prefix+"fpl", "show":show}),
         ("Boxes", showhide_callback, {"layer":prefix+"boxes", "show":show}),
         ("Border", showhide_callback, {"layer":prefix+"boundary", "show":show}),
         ("Centers", showhide_callback, {"layer":prefix+"centers", "show":show})
@@ -679,6 +734,8 @@ def render_everything(renderables,filenames, font):
             render_boundary(renderables,  0, xA, y, A_color, epsA)
         if show["A_tiling"]:
             render_tiling(renderables,0, xA, y, A_color, epsA)
+        if show["A_fpl"]:
+            render_fpl(renderables,0, xA, y, A_color, epsA)
         if show["A_centers"]:
             boxes += render_active_hex_centers(renderables, xA, y, 0,epsA)
         boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font, epsA)
@@ -700,6 +757,8 @@ def render_everything(renderables,filenames, font):
             render_boundary(renderables, 1, xB, y, B_color, epsB)
         if show["B_tiling"]:
             render_tiling(renderables, 1, xB, y, B_color, epsB)
+        if show["B_fpl"]:
+            render_fpl(renderables, 1, xB, y, B_color, epsB)
         if show["B_centers"]:
             boxes += render_active_hex_centers(renderables, xB, y, 1, epsB)
         boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font, epsB)
@@ -1095,6 +1154,9 @@ def load(basename):
     for param in default_lengths.keys():
         if param not in lengths:
             lengths[param] = default_lengths[param]
+    # this allows us to add new keys
+    show_default_dict = defaultdict(bool)
+    show_default_dict.update(show)
 
     renderables = {"highlight":[{},{}], # highlighted edges on left and right
                    "background":background, 
@@ -1105,7 +1167,7 @@ def load(basename):
                    "unscaled_coords": coords,
                    "dualcoords":dualcoords,
                    "unscaled_dualcoords":dualcoords,
-                   "show":show,
+                   "show":show_default_dict,
                    "lengths":lengths}
     compute_picture_sizes(renderables)
     return renderables
