@@ -15,6 +15,7 @@ black    = (   0,   0,   0)
 white    = ( 255, 255, 255)
 blue     = (  50,  50, 255)
 green    = (  75, 255,   0)
+lightgreen  = ( 175, 255,  100)
 dkgreen  = (   0, 100,   0)
 red      = ( 255,   0,   0)
 purple   = (0xBF,0x0F,0xB5)
@@ -25,6 +26,7 @@ grey     = (0x7f,0x7f,0x7f)
 # Edit these lines to alter the colors used.
 
 hi_color = green
+selection_color = lightgreen
 A_color = black
 B_color = red
 center_color = blue
@@ -375,6 +377,14 @@ def render_highlight(renderables, which_side, xoffset, yoffset, color, eps):
         render_rhombus(dualcoords, rhomb, xoffset, yoffset,color, 0, eps)
 
 
+def render_temp_selection(renderables, which_side, xoffset, yoffset, color, eps):
+    #for e in renderables["matchings"][which_side]:
+    for e in renderables["selection"]:
+        rhomb = renderables["rhombi"][e]
+        dualcoords = renderables["dualcoords"]
+        render_rhombus(dualcoords, rhomb, xoffset, yoffset,color, 0, eps)
+
+
 # Draw the boundary of the matched region.  There's a cheap way to do this:
 # the boundary is all the edges in the dual graph that are singly covered by
 # a tile edge.
@@ -606,11 +616,27 @@ def showhide_picture_callback(args):
     for picture in ["A", "Center", "B"]:
         show[picture] = (picture in pictures)
     compute_picture_sizes(renderables)
-    
+
+def fill_callback(args):
+    matching = args["matching"]
+    highlight = args["highlight"]
+    for e in highlight:
+        matching[e] = 1
+
+
+def clear_callback(args):
+    matching = args["matching"]
+    highlight = args["highlight"]
+    for e in highlight:
+        if e in matching:
+            del matching[e] 
+
+
 def render_dimer_buttons(x,y, side, renderables, font, eps):
     buttons = []
     matchings = renderables["matchings"] 
     hexagons = renderables["hexagons"]
+    highlight = renderables["highlight"]
     show = renderables["show"]
     args = {"side":side, "matching":matchings[side], "hexagons":hexagons}
     filename = eps["filename"]
@@ -623,7 +649,7 @@ def render_dimer_buttons(x,y, side, renderables, font, eps):
         ("Graph", showhide_callback, {"layer":prefix+"background", "show":show}),
         ("Dimer", showhide_callback, {"layer":prefix+"matching", "show":show}),
         ("Tiling", showhide_callback, {"layer":prefix+"tiling", "show":show}),
-        ("FPL", showhide_callback, {"layer":prefix+"fpl", "show":show}),
+        #("FPL", showhide_callback, {"layer":prefix+"fpl", "show":show}),
         ("Boxes", showhide_callback, {"layer":prefix+"boxes", "show":show}),
         ("Border", showhide_callback, {"layer":prefix+"boundary", "show":show}),
         ("Centers", showhide_callback, {"layer":prefix+"centers", "show":show})
@@ -636,6 +662,8 @@ def render_dimer_buttons(x,y, side, renderables, font, eps):
         ("Minimize", minimize_callback, args),
         ("Maximize", maximize_callback, args),
         ("EPS", eps_callback, {"eps":eps}),
+        ("Fill", fill_callback, {"matching":matchings[side], "highlight":highlight[side]}),
+        ("Clear", clear_callback, {"matching":matchings[side], "highlight":highlight[side]})
         ]
     return buttons + draw_button_row(x, y+20, 5, font, buttonrow2)
 
@@ -728,14 +756,15 @@ def render_everything(renderables,filenames, font):
             render_boxes(renderables,0,xA, y, A_color, epsA)
         if show["Highlight"]:
             render_highlight(renderables,0, xA, y, hi_color, epsA)
+        render_temp_selection(renderables,0, xA, y, selection_color, epsA)
         if show["A_matching"]:
             render_matching(renderables,0, xA, y, A_color, epsA)
         if show["A_boundary"]:
             render_boundary(renderables,  0, xA, y, A_color, epsA)
         if show["A_tiling"]:
             render_tiling(renderables,0, xA, y, A_color, epsA)
-        if show["A_fpl"]:
-            render_fpl(renderables,0, xA, y, A_color, epsA)
+        #if show["A_fpl"]:
+        #    render_fpl(renderables,0, xA, y, A_color, epsA)
         if show["A_centers"]:
             boxes += render_active_hex_centers(renderables, xA, y, 0,epsA)
         boxes += render_dimer_buttons(10+xA, 10, 0, renderables, font, epsA)
@@ -751,14 +780,15 @@ def render_everything(renderables,filenames, font):
             render_boxes(renderables,1,xB, y, B_color, epsB)
         if show["Highlight"]:
             render_highlight(renderables,1, xB, y, hi_color, epsB)
+        render_temp_selection(renderables,1, xB, y, selection_color, epsB)
         if show["B_matching"]:
             render_matching(renderables,1, xB, y, B_color, epsB)
         if show["B_boundary"]:
             render_boundary(renderables, 1, xB, y, B_color, epsB)
         if show["B_tiling"]:
             render_tiling(renderables, 1, xB, y, B_color, epsB)
-        if show["B_fpl"]:
-            render_fpl(renderables, 1, xB, y, B_color, epsB)
+        #if show["B_fpl"]:
+        #    render_fpl(renderables, 1, xB, y, B_color, epsB)
         if show["B_centers"]:
             boxes += render_active_hex_centers(renderables, xB, y, 1, epsB)
         boxes += render_dimer_buttons(10+xB, 10, 1, renderables, font, epsB)
@@ -773,6 +803,8 @@ def render_everything(renderables,filenames, font):
         if show["Highlight"]:
             render_highlight(renderables,0, xCenter, y, hi_color, epsCenter)
             render_highlight(renderables,1, xCenter, y, hi_color, epsCenter)
+            render_temp_selection(renderables,1, xCenter, y, selection_color, epsCenter)
+            
         if show["center_A_boundary"]:
             render_boundary(renderables, 0, xCenter+lengths["overlay_offset"], y, A_color, epsCenter)
         if show["center_B_boundary"]:
@@ -1168,6 +1200,7 @@ def load(basename):
                    "dualcoords":dualcoords,
                    "unscaled_dualcoords":dualcoords,
                    "show":show_default_dict,
+                   "selection":set(),
                    "lengths":lengths}
     compute_picture_sizes(renderables)
     return renderables
@@ -1278,8 +1311,72 @@ if eps_only:   # unless we're just rendering the eps files, which has already be
 clock=pygame.time.Clock() # Used to manage how fast the screen updates
 
 
+# Code for highlighting paralellogram
+selection = {}
+selecting_parallelogram = False
+first_corner = None
+second_corner = None
+def parallel(e1, e2):
+    delta_c = []
+    delta_r = []
+    for e in [e1, e2]:
+        [(r1, c1),(r2,c2)] = list(e) 
+        if c2>c1:
+            delta_c.append(c2-c1)
+            delta_r.append(r2-r1)
+        else:
+            delta_c.append(c1-c2)
+            delta_r.append(r1-r2)
+    return (delta_c[0] == delta_c[1] and delta_r[0] == delta_r[1])
 
+# Determine the two "increment vectors" which are the directions 
+# of the two sides of the paralellogram we're trying to select
+def find_increments(e1, e2):
+    [(r1, c1),(r2,c2)] = list(e1[0]) 
+    if c2>c1:
+        ((r1,c1),(r2,c2)) = ((r2,c2),(r1,c1))
+    [(r21, c21),(r22,c22)] = list(e2[0])
+    if c22>c21:
+        ((r21,c21),(r22,c22)) = ((r22,c22),(r21,c21))
+    delta_c=(c2-c1)
+    delta_r=(r2-r1)
+    (vr,vc) = (r21-r1, c21-c1) 
 
+    if (delta_r, delta_c) in ((0,4), (0,-4)): # "---"
+        ((a,c),(b,d)) = ((-2, -6), (-2, 6)) 
+    elif (delta_r, delta_c) in ((2,2), (-2,-2)): # "\"
+        ((a,c), (b,d)) = ((4,0), (-2,-6))
+    elif (delta_r, delta_c) in ((-2,2), (2,-2)): # "/"
+        ((a,c), (b,d)) = ((-2,6), (4,0))
+    else:
+        raise Exception("Something weird happened: %d, %d" % (delta_r, delta_c))
+    (inc0, inc1) = ((a,c),(b,d))
+    det = a*d - b*c
+    max0 = ( d*vr - b*vc)/det
+    max1 = (-c*vr + a*vc)/det
+    return (inc0, inc1, max0, max1)
+
+def find_selected_edges(e1, e2, renderables):
+    (inc0, inc1, max0, max1) = find_increments(e1,e2)
+    graph = renderables["rhombi"]
+    if max0 < 0:
+        max0 *= -1
+        inc0 = (-inc0[0], -inc0[1]) 
+    if max1 < 0:
+        max1 *= -1
+        inc1 = (-inc1[0], -inc1[1]) 
+    (v0, v1) = tuple(e1[0])
+    select = set()
+    for i in range(max0+1):
+        for j in range(max1+1):
+            hi_v0 = (v0[0] + i*inc0[0] + j*inc1[0], v0[1] + i*inc0[1] + j*inc1[1])
+            hi_v1 = (v1[0] + i*inc0[0] + j*inc1[0], v1[1] + i*inc0[1] + j*inc1[1])
+            hi_e = frozenset([hi_v0, hi_v1])
+            if hi_e in graph:
+                select.add(hi_e)
+    return select
+
+    
 #=================================================
 # Pygame event loop
 while done==False:
@@ -1292,20 +1389,63 @@ while done==False:
             compute_picture_sizes(renderables)
             bounding_box_data = render_everything(renderables, filenames,font)
             bounding_boxes = [record[3] for record in bounding_box_data]
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            radius = 1
+            ul = (event.pos[0] - radius, event.pos[1] - radius)
+            clickpoint = pygame.Rect(ul , (2*radius,2*radius))
+            box_index = clickpoint.collidelist(bounding_boxes)
+            if(box_index != -1): 
+                (objtype, edge, side, box) = bounding_box_data[box_index]
+                if (objtype == "edge"):
+                    selecting_parallelogram = True  
+                    first_corner = (edge, side)
+                    second_corner = (edge, side)
+                    print "Starting Parallelogram select:", first_corner
+                    selection = find_selected_edges(first_corner, second_corner, renderables)
+                    renderables["selection"] = selection
+                    bounding_box_data = render_everything(renderables, filenames, font)
+                    bounding_boxes = [record[3] for record in bounding_box_data]
+
+        if event.type == pygame.MOUSEMOTION and selecting_parallelogram:
+            radius = 1
+            ul = (event.pos[0] - radius, event.pos[1] - radius)
+            mousepos = pygame.Rect(ul , (2*radius,2*radius))
+            box_index = mousepos.collidelist(bounding_boxes)
+            if(box_index != -1):
+                (objtype, edge, side, box) = bounding_box_data[box_index]
+                if objtype == "edge":
+                    if side == second_corner[1] and edge != second_corner[0]:
+                        if parallel(edge, first_corner[0]):
+                            second_corner = (edge, side)
+                            print "Update selection"
+                            selection = find_selected_edges(first_corner, second_corner, renderables)
+                            renderables["selection"] = selection
+                bounding_box_data = render_everything(renderables, filenames, font)
+                bounding_boxes = [record[3] for record in bounding_box_data]
+
         if event.type == pygame.MOUSEBUTTONUP:
             radius = 1
             ul = (event.pos[0] - radius, event.pos[1] - radius)
             clickpoint = pygame.Rect(ul , (2*radius,2*radius))
             box_index = clickpoint.collidelist(bounding_boxes)
+            if(event.button == 3 and selecting_parallelogram):
+                #highlight_edge(renderables, edge, side)
+                selecting_parallelogram = False
+                for e in selection:
+                    renderables["highlight"][side][e] = 1
+                selection = set()
+                renderables["selection"] = selection
+                print "Stopping Parallelogram select:", second_corner
+                bounding_box_data = render_everything(renderables, filenames, font)
+                bounding_boxes = [record[3] for record in bounding_box_data]
             if(box_index != -1):
                 objtype = bounding_box_data[box_index][0]
                 matchings = renderables["matchings"]
                 hexagons = renderables["hexagons"]
                 if objtype == "edge":
                     (objtype, edge, side, box) = bounding_box_data[box_index]
-                    if(event.button == 3):
-                        highlight_edge(renderables, edge, side)
-                    else:
+                    
+                    if(event.button == 1):
                         if edge in matchings[side]:
                             print "deleting"
                             del matchings[side][edge]
