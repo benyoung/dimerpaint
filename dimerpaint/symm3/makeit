@@ -1,0 +1,4 @@
+#!/bin/sh
+mklattice full.mkl
+mklattice A.mkl
+mklattice B.mkl
