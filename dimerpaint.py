@@ -1,4 +1,4 @@
-#!/usr/bin/python -tt
+#!/usr/bin/python3 
 
 import pickle
 import copy
@@ -495,18 +495,18 @@ def draw_adjuster_row(x, y, spacing, lengths, font, adjusterlist):
 
 
 def test_callback(args):
-    print "Clicked test button on side" , args["side"]
+    print("Clicked test button on side" , args["side"])
 
 def maximize_callback(args):
-    print "Clicked minimize button on side", args["side"]
+    print("Clicked minimize button on side", args["side"])
     maximize(args["matching"], args["hexagons"])
 
 def minimize_callback(args):
-    print "Clicked minimize button on side", args["side"]
+    print("Clicked minimize button on side", args["side"])
     minimize(args["matching"], args["hexagons"])
 
 def randomize_callback(args):
-    print "Clicked randomize button on side", args["side"]
+    print("Clicked randomize button on side", args["side"])
     randomize(args["matching"], args["hexagons"], args["steps"])
 
 def adjust_callback(args):
@@ -516,7 +516,7 @@ def adjust_callback(args):
     lengths[quantity] += amount
     if(lengths[quantity] < 0):
         lengths[quantity] = 0
-    print "%s set to %f" % (quantity, lengths[quantity])
+    print("%s set to %f" % (quantity, lengths[quantity]))
 
 def null_callback(args):
     pass
@@ -539,17 +539,17 @@ def fullscreen_callback(args):
 
 
 def clear_highlight_callback(args):
-    print "Clear all highlighting."
+    print("Clear all highlighting.")
     args["renderables"]["highlight"] = [{},{}]
 
 def quit_callback(args):
-    print "Quit button clicked."
+    print("Quit button clicked.")
     pygame.event.post(pygame.event.Event(pygame.QUIT, {}))
 
 def load_callback(args):
     myname = args["myname"]
     f = args["filenames"]
-    print "Load button clicked:" + args["myname"]
+    print("Load button clicked:" + args["myname"])
     old_basename = f["basename"]
     save(old_basename, args["renderables"])
 
@@ -561,10 +561,10 @@ def load_callback(args):
     new_renderables = load(filenames["basename"])
     for item in new_renderables.keys():
         renderables[item] = new_renderables[item]
-    print "Looks like I loaded it successfully"
+    print("Looks like I loaded it successfully")
 
 def eps_callback(args):
-    print "Print to EPS button clicked"
+    print("Print to EPS button clicked")
     coords = args["eps"]["coords"]
     ps = args["eps"]["ps"]
     filename = args["eps"]["filename"]
@@ -604,7 +604,7 @@ def eps_callback(args):
 def showhide_callback(args):
     layer = args["layer"]
     show = args["show"]
-    print "Toggle ", layer
+    print("Toggle ", layer)
     show[layer] = not show[layer]
 
 # Toggle visibility of one of the 3 displays; resize pictures.
@@ -612,7 +612,7 @@ def showhide_picture_callback(args):
     renderables = args["renderables"]
     pictures = args["pictures"]
     show = renderables["show"]
-    print "Showing some pictures:", pictures
+    print("Showing some pictures:", pictures)
     for picture in ["A", "Center", "B"]:
         show[picture] = (picture in pictures)
     compute_picture_sizes(renderables)
@@ -1210,10 +1210,10 @@ def load(basename):
 def highlight_edge(renderables, edge, side):
     highlight = renderables["highlight"]
     if edge in highlight[side]:
-        print "edge highlight off: side ", side, edge
+        print("edge highlight off: side ", side, edge)
         del highlight[side][edge]
     else:
-        print "edge highlight on: side ", side, edge
+        print("edge highlight on: side ", side, edge)
         highlight[side][edge] = 1
 
 def highlight_hexagon(renderables, hexagon, side):
@@ -1384,7 +1384,7 @@ while done==False:
         if event.type == pygame.QUIT: # If user clicked close
             done=True # Flag that we are done so we exit this loop
         if event.type == pygame.VIDEORESIZE:
-            print "user resized screen ", event.size
+            print("user resized screen ", event.size)
             screen=pygame.display.set_mode(event.size, pygame.RESIZABLE)
             compute_picture_sizes(renderables)
             bounding_box_data = render_everything(renderables, filenames,font)
@@ -1400,7 +1400,7 @@ while done==False:
                     selecting_parallelogram = True  
                     first_corner = (edge, side)
                     second_corner = (edge, side)
-                    print "Starting Parallelogram select:", first_corner
+                    print("Starting Parallelogram select:", first_corner)
                     selection = find_selected_edges(first_corner, second_corner, renderables)
                     renderables["selection"] = selection
                     bounding_box_data = render_everything(renderables, filenames, font)
@@ -1417,7 +1417,7 @@ while done==False:
                     if side == second_corner[1] and edge != second_corner[0]:
                         if parallel(edge, first_corner[0]):
                             second_corner = (edge, side)
-                            print "Update selection"
+                            print("Update selection")
                             selection = find_selected_edges(first_corner, second_corner, renderables)
                             renderables["selection"] = selection
                 bounding_box_data = render_everything(renderables, filenames, font)
@@ -1435,7 +1435,7 @@ while done==False:
                     renderables["highlight"][side][e] = 1
                 selection = set()
                 renderables["selection"] = selection
-                print "Stopping Parallelogram select:", second_corner
+                print("Stopping Parallelogram select:", second_corner)
                 bounding_box_data = render_everything(renderables, filenames, font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
             if(box_index != -1):
@@ -1447,10 +1447,10 @@ while done==False:
                     
                     if(event.button == 1):
                         if edge in matchings[side]:
-                            print "deleting"
+                            print("deleting")
                             del matchings[side][edge]
                         else:
-                            print "adding"
+                            print("adding")
                             matchings[side][edge] = 1
                 elif objtype == "matchededge":
                     (objtype, matchededge, side, box) = bounding_box_data[box_index]
@@ -1468,7 +1468,7 @@ while done==False:
                     else:
                         flip_hex(matchings[side], hexagons, hexagon)
                 else:
-                    print "uh why am I here?"
+                    print("uh why am I here?")
 
                 bounding_box_data = render_everything(renderables, filenames, font)
                 bounding_boxes = [record[3] for record in bounding_box_data]
