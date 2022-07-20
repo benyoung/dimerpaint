@@ -4,6 +4,7 @@ import numpy as np
 import pygame
 import sys
 import itertools
+import pickle
 
 """
 creates the positioned list of vertices for an a x b x c hexagon graph
@@ -193,103 +194,60 @@ calls the draw line function in pygame to draw a line from coord1 to coord2 in t
 """
 def render_edge(coord1, coord2, color, thickness = 4):
     pygame.draw.line(screen, color, coord1, coord2, thickness)
-    
-    
+
+"""
+draws a button in the desired position with given label
+"""
 def button(position, label, event, mouse_location):
     font = pygame.font.Font('freesansbold.ttf', 28)
     text = font.render(label, True, black, white)
     buttonbox = text.get_rect()
     buttonbox.midleft = position
-    
+
     screen.blit(text, buttonbox)
     buttonbox.inflate_ip(20,20)
     pygame.draw.rect(screen, black, buttonbox, 1)
     buttonbox.inflate_ip(10,10)
     pygame.draw.rect(screen, (200,200,200), buttonbox, 1)
-    
+
     if event.type == pygame.MOUSEBUTTONDOWN and buttonbox.collidepoint(mouse_location):
         pygame.draw.rect(screen, (255, 255, 255), buttonbox, 1)
         return True
-    
-    
+
+"""
+draws a button with + and - adjusters on the right and left and 
+returns +1 or -1 if + or - is clicked
+"""
 def pmbutton(position, label, event, mouse_location):
     font = pygame.font.Font('freesansbold.ttf', 28)
     start_x = position[0]
     start_y = position[1]
-    
+
     minus = button(position, "-", event, mouse_location)
-    
+
     buttonbox = font.render("-", False, black, white).get_rect()
     new_x_position = buttonbox[2]
     button((start_x + new_x_position + 30, start_y), label, event, mouse_location)
-    
+
     buttonbox = font.render(label, False, black, white).get_rect()
     new_x_position += buttonbox[2]
     plus = button((start_x + new_x_position + 60, start_y), "+", event, mouse_location)
-    
+
     if minus:
         return -1
-    
+
     if plus:
         return 1
-        
-    
-    
-def integer_input(x_position, y_position, event, mouse_location, current_text = ""):
 
-    # create rectangle
-    input_rect = pygame.Rect(x_position, y_position, 32, 32)
-        
-    if input_rect.collidepoint(mouse_location):
-        box_active = True
-    else:
-        box_active = False
-    
-    
-    #def input_box():
-    base_font = pygame.font.Font(None, 28)
-    user_text = ''
-
-    # gets active when input box is clicked by user
-    color_active = pygame.Color((225, 225, 255))
-
-    # color_passive store color(chartreuse4) which is
-    # color of input box.
-    color_passive = pygame.Color((225, 225, 225))
-    color = color_passive
-    
-    if box_active:
-        color = color_active
-        if event.type == pygame.KEYDOWN:
-            # Check for backspace
-            if event.key == pygame.K_BACKSPACE:
-                # get text input from 0 to -1 i.e. end.
-                user_text = user_text[:-1]
-
-        # Unicode standard is used for string
-        # formation
-            else:
-                user_text += event.unicode
-    else:
-        color = color_passive
-        
-    # draw rectangle and argument passed which should
-        # be on screen
-    pygame.draw.rect(screen, color, input_rect)
-    text_surface = base_font.render(user_text, True, (0, 0, 0))
-        
-        # render at position stated in arguments
-    screen.blit(text_surface, (input_rect.x+5, input_rect.y+5))
-    return user_text
-        
-    
-
+"""
+renders the square grid and centers
+"""
 def render_squares(x,y):
     unscaled_vertex_list, unscaled_center_list = square_vertices(x,y, shift_factor = (3, 4)) 
     edge_list, edge_rect_list = make_edges(unscaled_vertex_list, scale_factor)
     vertex_list = scale_vertices(unscaled_vertex_list, scale_factor)
     center_list = scale_vertices(unscaled_center_list, scale_factor)
-    
+
     # goes through the edge list to draw the edges
     for j, i in enumerate(edge_list):
         tup_1 = i[0]
@@ -299,13 +257,18 @@ def render_squares(x,y):
         # for a rainbow over all the edges, replace the color with 
         "rainbow(j, len(edge_list))"
 
-    # goes through the list of vertices to draw the dots on top of the edges    
+    # goes through the list of vertices to draw the dots on top of the edges
     for j,i in enumerate(vertex_list):
         render_vertex(i, black, 6)
 
     for i in center_list:
         render_vertex(i, teal, 8)
-        
+
+    return vertex_list, center_list, edge_list
+
+"""
+renders the hexagonal grid and centers
+"""
 def render_hexes(a,b,c):
     unscaled_vertex_list, unscaled_center_list = hex_vertices(a, b, c, shift_factor = (4,4)) # \ by / by |
     edge_list, edge_rect_list = make_edges(unscaled_vertex_list, scale_factor)
@@ -327,6 +290,8 @@ def render_hexes(a,b,c):
 
     for i in center_list:
         render_vertex(i, teal, 8)
+
+    return vertex_list, center_list, edge_list
 
 
 ##############################################    
@@ -359,73 +324,64 @@ yellow = 255, 255, 50
 
 
 #renders the screen
-screen = pygame.display.set_mode(size)
+screen = pygame.display.set_mode(size, pygame.RESIZABLE)
 
 #sets the background to be white
 screen.fill(white)
 
 
 
-
-
-# needs to be a continual loop to keep drawing the screen? I think
+# needs to be a continual loop to keep drawing the screen
 mouse_location = (0,0)
 while True:
-    
+
     for event in pygame.event.get():
-        
-        
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             mouse_location = pygame.mouse.get_pos()
 
         if event.type == pygame.QUIT: 
             pygame.quit()
             sys.exit()
-        
-        
+
         square_grid = button((50,50), "square grid", event, mouse_location)
         hexagonal_grid = button((300, 50), "hexagonal grid", event, mouse_location)
-        
+
         x_size = pmbutton((50, 125), "width", event, mouse_location)
         if x_size == 1 or x_size == -1:
             x_val += x_size
             if x_val < 1:
                 x_val = 1
-                
-            
+
             screen.fill(white)
-            render_squares(x_val, y_val)
-                
+            vertex_list, center_list, edge_list = render_squares(x_val, y_val)
+
         y_size = pmbutton((300, 125), "height", event, mouse_location)
         if y_size == 1 or y_size == -1:
             y_val += y_size
             if y_val < 1:
                 y_val = 1
-                
-            
+
             screen.fill(white)
-            render_squares(x_val, y_val)
-            
-            
+            vertex_list, center_list, edge_list = render_squares(x_val, y_val)
+
         a_size = pmbutton((50, 200), "a", event, mouse_location)
         if a_size == 1 or a_size == -1:
             a += a_size
             if a < 1:
                 a = 1
-                
-            
+
             screen.fill(white)
-            render_hexes(a,b,c)
-                
-                
+            vertex_list, center_list, edge_list = render_hexes(a,b,c)
+
         b_size = pmbutton((300, 200), "b", event, mouse_location)
         if b_size == 1 or b_size == -1:
             b += b_size
             if b < 1:
                 b = 1
             screen.fill(white)
-            render_hexes(a,b,c)
-            
+            vertex_list, center_list, edge_list = render_hexes(a,b,c)
+
         c_size = pmbutton((550, 200), "c", event, mouse_location)
         if c_size == 1 or c_size == -1:
             c += c_size
@@ -433,89 +389,31 @@ while True:
                 c = 1
             screen.fill(white)
             render_hexes(a,b,c)
-            
-            
-        
+
         if square_grid:
-            
+
             screen.fill(white)
-            render_squares(x_val, y_val)
-            
-            
-            """
-            x1 = button((50, 65*1 + 50), "1", event, mouse_location)
-            print(x1)
-            if x1:
-                print("one")
-                x = 1
-                screen.fill(white)
-                render_squares(x,y)
-            x2 = button((50, 65*2 + 50), "2", event, mouse_location)
-            if x2:
-                x = 2
-                screen.fill(white)
-                render_squares(x,y)
-            x3 = button((50, 65*3 + 50), "3", event, mouse_location)
-            if x3:
-                x = 3
-                screen.fill(white)
-                render_squares(x,y)
-            x4 = button((50, 65*4 + 50), "4", event, mouse_location)
-            if x4:
-                x = 4
-                screen.fill(white)
-                render_squares(x,y)
-            x5 = button((50, 65*5 + 50), "5", event, mouse_location)
-            if x5:
-                x = 5
-                screen.fill(white)
-                render_squares(x,y)
-            x6 = button((50, 65*6 + 50), "6", event, mouse_location)
-            if x6:
-                x = 6
-                screen.fill(white)
-                render_squares(x,y)
-            x7 = button((50, 65*7 + 50), "7", event, mouse_location)
-            if x7:
-                x = 7
-                render_squares(x,y)
-            x8 = button((50, 65*8 + 50), "8", event, mouse_location)
-            if x8:
-                x = 8
-                render_squares(x,y)
-            x9 = button((50, 65*9 + 50), "9", event, mouse_location)
-            if x9:
-                x = 9
-                render_squares(x,y)
-            x10 = button((50, 65*10 + 50), "10", event, mouse_location)
-            if x10:
-                x = 10
-                render_squares(x,y)
-            x11 = button((50, 65*11 + 50), "11", event, mouse_location)
-            if x11:
-                x = 11
-                render_squares(x,y)
-            x12 = button((50, 65*12 + 50), "12", event, mouse_location)
-            if x12:
-                x = 12
-                render_squares(x,y)
-            x13 = button((50, 65*13 + 50), "13", event, mouse_location)
-            if x13:
-                x = 13
-                render_squares(x,y)
-            #for i in range(1, 11):
-            #    x_val = button((50, 65*i + 50), f"{i}", event, mouse_location)
-            """
-                
-#            render_squares(x,y)
-            
+            vertex_list, center_list, edge_list =  render_squares(x_val, y_val)
+            hexagonal_grid = False
+
         if hexagonal_grid:
-                        
-            
+
             screen.fill(white)
+
+            vertex_list, center_list, edge_list = render_hexes(a,b,c)
+            square_grid = False
             
-            render_hexes(a,b,c)
-        
+            
+        save = button((size[0] - 100, size[1] - 100), "save", event, mouse_location)
+        if save:
+            with open("lattice.txt", "wb") as fh:
+                pickle.dump({"vertices" : vertex_list,
+                             "edges" : edge_list,
+                             "centers" : center_list
+                             }, fh)
+                print("File Saved")
+            
+
     # display.flip() will update only a portion of the
     # screen to updated, not full area
         pygame.display.flip()
